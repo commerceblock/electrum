@@ -1149,8 +1149,8 @@ class Transaction:
             if o.type == TYPE_SCRIPT and o.address == '':
                 return o.value
         # if fee output has not been added it will return
-        # the original fee sum of input - sum of output value
-        return self.input_value() - self.output_value()
+        # zero. Transactions with non-equal inputs and outputs are not valid. 
+        return 0
 
     def is_final(self):
         return not any([x.get('sequence', 0xffffffff - 1) < 0xffffffff - 1 for x in self.inputs()])
