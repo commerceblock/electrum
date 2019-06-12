@@ -369,6 +369,8 @@ if __name__ == '__main__':
 
     config_options['cwd'] = os.getcwd()
 
+    config_options['testnet'] = True
+
     # fixme: this can probably be achieved with a runtime hook (pyinstaller)
     if is_bundle and os.path.exists(os.path.join(sys._MEIPASS, 'is_portable')):
         config_options['portable'] = True
@@ -389,10 +391,6 @@ if __name__ == '__main__':
 
     # todo: defer this to gui
     config = SimpleConfig(config_options)
-
-    if not config.get('contract_hash'):
-        print_stderr("Contract Hash not set. Move the `contract` file to `{}`".format(config.electrum_path()))
-        sys.exit(1)
 
     cmdname = config.get('cmd')
 
