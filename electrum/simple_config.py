@@ -291,7 +291,8 @@ class SimpleConfig(PrintError):
             self.set_key('gui_last_wallet', path)
 
     def update_contract_from_data(self):
-        data = pkgutil.get_data('electrum', 'contract/contract')
+#        data = pkgutil.get_data('electrum', 'contract/contract')
+        data = b'These are the terms and conditions\nApprove to use the gold-test network\n'
         self.contract_text = data.decode("utf-8")
         # Hash contract and store in string format
         self.set_key('contract_hash', bh2u(Hash(data)[::-1]))
