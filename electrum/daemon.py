@@ -33,7 +33,7 @@ import jsonrpclib
 from .jsonrpc import VerifyingJSONRPCServer
 
 from .version import ELECTRUM_VERSION
-from .network import Network
+from .network import Network, BTCNetwork
 from .util import json_decode, DaemonThread
 from .util import print_error, to_string
 from .wallet import Wallet
@@ -124,9 +124,15 @@ class Daemon(DaemonThread):
         self.config = config
         if config.get('offline'):
             self.network = None
+            self.network_btc = None
         else:
             self.network = Network(config)
             self.network.start()
+            if config.get('mainstay_on', False):
+                self.network_btc = BTCNetwork(config)
+                self.network_btc.start()
+            else:
+                self.network_btc = None
         self.fx = FxThread(config, self.network)
         if self.network:
             self.network.add_jobs([self.fx])
@@ -296,6 +302,10 @@ class Daemon(DaemonThread):
             self.print_error("shutting down network")
             self.network.stop()
             self.network.join()
+        if self.network_btc:
+            self.print_error("shutting down btc network")
+            self.network_btc.stop()
+            self.network_btc.join()
         self.on_stop()
 
     def stop(self):

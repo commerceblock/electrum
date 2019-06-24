@@ -190,7 +190,7 @@ class ElectrumGui:
             self.nd.raise_()
             return
         self.nd = NetworkDialog(self.daemon.network, self.config,
-                                self.network_updated_signal_obj)
+                                self.network_updated_signal_obj, self.daemon.network_btc)
         self.nd.show()
 
     def create_window_for_wallet(self, wallet):

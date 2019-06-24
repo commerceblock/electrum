@@ -84,7 +84,7 @@ class SimpleConfig(PrintError):
         # don't allow to be set on CLI:
         self.cmdline_options.pop('config_version', None)
 
-        # Set self.path and read the user config
+        # Set self.path and read the user config byvv
         self.user_config = {}  # for self.get in electrum_path()
         self.path = self.electrum_path()
         self.user_config = read_user_config_function(self.path)
@@ -226,11 +226,12 @@ class SimpleConfig(PrintError):
     def is_modifiable(self, key):
         return key not in self.cmdline_options
 
-    def save_user_config(self):
+    def save_user_config(self,prnt=False):
         if not self.path:
             return
         path = os.path.join(self.path, "config")
         s = json.dumps(self.user_config, indent=4, sort_keys=True)
+        if prnt: print(s)
         try:
             with open(path, "w", encoding='utf-8') as f:
                 f.write(s)

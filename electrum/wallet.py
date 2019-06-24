@@ -196,7 +196,9 @@ class Abstract_Wallet(AddressSynchronizer):
         self.coin_price_cache = {}
 
     def get_block_height(self):
-        return self.network.get_local_height()
+        if self.network:
+            return self.network.get_local_height()
+        else: return 0
 
     def load_and_cleanup(self):
         self.load_keystore()

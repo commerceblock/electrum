@@ -51,7 +51,12 @@ class OceanMainnet:
     DEFAULT_PORTS = {'t': '50001', 's': '50002'}
     DEFAULT_SERVERS = read_json('servers.json', {})
     MAPPING_URL = 'https://s3.eu-west-2.amazonaws.com/cb-mapping/map.json'
+    MAINSTAY_URL = 'https://testnet.mainstay.xyz'
     CHECKPOINTS = []    # no handling for checkpoins
+
+    BTC_GENESIS = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"
+    BTC_DEFAULT_SERVERS = read_json('btc_servers.json', {})
+    BTC_CHECKPOINTS = read_json('checkpoints.json', [])
 
     XPRV_HEADERS = {
         'standard':    0x0488ade4,  # xprv
@@ -90,7 +95,7 @@ class OceanTestnet(OceanMainnet):
     ADDRTYPE_P2SH = 75
     WHITELISTCOINSDESTINATION = "76a914f9203678f55c1fd3d99831836ff01fbe1071ccd788ac"
     WHITELISTCOINSADDRESS = "2dx91EU6mn4yqAJhrqhi4fbywMeW3LbLRzD"
-    GENESIS = "672e90f01e9c89385030c05583ed9c8fa08a6916b6c1a00885150efa31edacc0"
+    GENESIS = "8fe2b5ce49136a9dd9052717a4dd43ebd884d599de66dde590cd13a448f5f55e"
 
     XPRV_HEADERS = {
         'standard':    0x04358394,  # xprv
