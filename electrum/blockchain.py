@@ -562,7 +562,7 @@ class Blockchain(util.PrintError):
 
 class BTCBlockchain(util.PrintError):
     """
-    Manages blockchain headers and their verification
+    Manages Bitcoibn blockchain headers and their verification
     """
 
     def __init__(self, config, forkpoint, parent_id):
@@ -641,7 +641,7 @@ class BTCBlockchain(util.PrintError):
         target = self.get_target(index-1)
         for i in range(num):
             raw_header = data[i*80:(i+1) * 80]
-            header = deserialize_header(raw_header, index*2016 + i)
+            header = deserialize_btc_header(raw_header, index*2016 + i)
             self.verify_header(header, prev_hash, target)
             prev_hash = hash_btc_header(header)
 

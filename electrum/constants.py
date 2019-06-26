@@ -56,7 +56,7 @@ class OceanMainnet:
 
     BTC_GENESIS = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"
     BTC_DEFAULT_SERVERS = read_json('btc_servers.json', {})
-    BTC_CHECKPOINTS = read_json('checkpoints.json', [])
+    BTC_CHECKPOINTS = read_json('btc_checkpoints.json', [])
 
     XPRV_HEADERS = {
         'standard':    0x0488ade4,  # xprv
