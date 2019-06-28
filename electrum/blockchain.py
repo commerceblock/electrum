@@ -583,10 +583,10 @@ class BTCBlockchain(util.PrintError):
         return func_wrapper
 
     def parent(self):
-        return blockchains[self.parent_id]
+        return btc_blockchains[self.parent_id]
 
     def get_max_child(self):
-        children = list(filter(lambda y: y.parent_id==self.forkpoint, blockchains.values()))
+        children = list(filter(lambda y: y.parent_id==self.forkpoint, btc_blockchains.values()))
         return max([x.forkpoint for x in children]) if children else None
 
     def get_forkpoint(self):
@@ -623,7 +623,6 @@ class BTCBlockchain(util.PrintError):
         self._size = os.path.getsize(p)//80 if os.path.exists(p) else 0
 
     def verify_header(self, header, prev_hash, target):
-        print(header)
         _hash = hash_btc_header(header)
         if prev_hash != header.get('prev_block_hash'):
             raise Exception("prev hash mismatch: %s vs %s" % (prev_hash, header.get('prev_block_hash')))
@@ -655,7 +654,7 @@ class BTCBlockchain(util.PrintError):
         chunk_within_checkpoint_region = index < len(self.checkpoints)
         # chunks in checkpoint region are the responsibility of the 'main chain'
         if chunk_within_checkpoint_region and self.parent_id is not None:
-            main_chain = blockchains[0]
+            main_chain = btc_blockchains[0]
             main_chain.save_chunk(index, chunk)
             return
 
@@ -691,21 +690,21 @@ class BTCBlockchain(util.PrintError):
         self.write(parent_data, 0)
         parent.write(my_data, (forkpoint - parent.forkpoint)*80)
         # store file path
-        for b in blockchains.values():
+        for b in btc_blockchains.values():
             b.old_path = b.path()
         # swap parameters
         self.parent_id = parent.parent_id; parent.parent_id = parent_id
         self.forkpoint = parent.forkpoint; parent.forkpoint = forkpoint
         self._size = parent._size; parent._size = parent_branch_size
         # move files
-        for b in blockchains.values():
+        for b in btc_blockchains.values():
             if b in [self, parent]: continue
             if b.old_path != b.path():
                 self.print_error("renaming", b.old_path, b.path())
                 os.rename(b.old_path, b.path())
         # update pointers
-        blockchains[self.forkpoint] = self
-        blockchains[parent.forkpoint] = parent
+        btc_blockchains[self.forkpoint] = self
+        btc_blockchains[parent.forkpoint] = parent
 
     def assert_headers_file_available(self, path):
         if os.path.exists(path):
