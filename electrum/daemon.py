@@ -41,6 +41,7 @@ from .storage import WalletStorage
 from .commands import known_commands, Commands
 from .simple_config import SimpleConfig
 from .exchange_rate import FxThread
+from .mainstay import MainstayThread
 from .plugin import run_hook
 
 
@@ -131,11 +132,14 @@ class Daemon(DaemonThread):
             if config.get('mainstay_on', False):
                 self.network_btc = BTCNetwork(config)
                 self.network_btc.start()
+                self.mainstay = MainstayThread(config, self.network, self.network_btc)
             else:
                 self.network_btc = None
         self.fx = FxThread(config, self.network)
         if self.network:
-            self.network.add_jobs([self.fx])        
+            self.network.add_jobs([self.fx])
+            if self.network_btc:
+                self.network.add_jobs([self.mainstay])
         self.gui = None
         self.wallets = {}
         # Setup JSONRPC server

@@ -47,11 +47,11 @@ class OceanMainnet:
     ADDRTYPE_P2PKH = 0
     ADDRTYPE_P2SH = 5
     SEGWIT_HRP = "bc"
-    GENESIS = ""
+    GENESIS = "5d8353c6bfb2ff7923869ae7f89074ce9db26cff167db36843a78f840007130c"
     DEFAULT_PORTS = {'t': '50001', 's': '50002'}
     DEFAULT_SERVERS = read_json('servers.json', {})
     MAPPING_URL = 'https://s3.eu-west-2.amazonaws.com/cb-mapping/map.json'
-    MAINSTAY_URL = 'https://testnet.mainstay.xyz'
+    MAINSTAY_URL = 'https://mainstay.xyz'
     CHECKPOINTS = []    # no handling for checkpoins
 
     BTC_GENESIS = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"
@@ -85,6 +85,9 @@ class OceanMainnet:
     WHITELISTASSET="c5df05768e4d67b9adde1ea711916a9fbd1b491f19724603678681caf8f9e82c"
 
     CHALLENGE = "532103041f9d9edc4e494b07eec7d3f36cedd4b2cfbb6fe038b6efaa5f56b9636abd7b21037c06b0c66c98468d64bb43aff91a65c0a576113d8d978c3af191e38845ae5dab21031bd16518d76451e7cf13f64087e4ae4816d08ae1d579fa6c172dcfe4476bd7da210226c839b56b99af781bbb4ce14365744253ae75ffe6f9182dd7b0df95c439537a21023cd2fc00c9cb185b4c0da16a45a1039e16709a61fb22340645790b7d1391b66055ae"
+
+    MAINSTAY_SCRIPT = "51210398a9d46d61eff20e8b46deb92d44019f90ee18c49f9ede8d7cb0e137858931c22103f3a47439546f7c46de3d56bc13d50897d1438219c4375918db6f48a8f153764452ae"
+    MAINSTAY_CHAINCODES = ["14df7ece79e83f0f479a37832d770294014edc6884b0c8bfa2e0aaf51fb00229","14df7ece79e83f0f479a37832d770294014edc6884b0c8bfa2e0aaf51fb00229"]
 
 # Current Testnet purposes
 class OceanTestnet(OceanMainnet):

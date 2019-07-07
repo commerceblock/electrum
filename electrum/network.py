@@ -1621,7 +1621,7 @@ class BTCNetwork(util.DaemonThread):
     def start_random_interface(self):
         with self.interface_lock:
             exclude_set = self.disconnected_servers.union(set(self.interfaces))
-        server = pick_random_server(self.get_servers(), self.protocol, exclude_set)
+        server = pick_random_btc_server(self.get_servers(), self.protocol, exclude_set)
         if server:
             self.start_interface(server)
 
@@ -2393,7 +2393,7 @@ class BTCNetwork(util.DaemonThread):
         """ Use this method if you want to make the network request
         synchronous. """
         if not callback:
-            return Network.__wait_for(invocation)
+            return BTCNetwork.__wait_for(invocation)
 
         invocation(callback)
 
@@ -2450,56 +2450,62 @@ class BTCNetwork(util.DaemonThread):
         command = 'blockchain.scripthash.get_history'
         invocation = lambda c: self.send([(command, [hash])], c)
 
-        return Network.__with_default_synchronous_callback(invocation, callback)
+        return BTCNetwork.__with_default_synchronous_callback(invocation, callback)
 
     def subscribe_to_headers(self, callback=None):
         command = 'blockchain.headers.subscribe'
         invocation = lambda c: self.send([(command, [True])], c)
 
-        return Network.__with_default_synchronous_callback(invocation, callback)
+        return BTCNetwork.__with_default_synchronous_callback(invocation, callback)
 
     def subscribe_to_address(self, address, callback=None):
         command = 'blockchain.address.subscribe'
         invocation = lambda c: self.send([(command, [address])], c)
 
-        return Network.__with_default_synchronous_callback(invocation, callback)
+        return BTCNetwork.__with_default_synchronous_callback(invocation, callback)
 
     def get_merkle_for_transaction(self, tx_hash, tx_height, callback=None):
         command = 'blockchain.transaction.get_merkle'
         invocation = lambda c: self.send([(command, [tx_hash, tx_height])], c)
 
-        return Network.__with_default_synchronous_callback(invocation, callback)
+        return BTCNetwork.__with_default_synchronous_callback(invocation, callback)
 
     def subscribe_to_scripthash(self, scripthash, callback=None):
         command = 'blockchain.scripthash.subscribe'
         invocation = lambda c: self.send([(command, [scripthash])], c)
 
-        return Network.__with_default_synchronous_callback(invocation, callback)
+        return BTCNetwork.__with_default_synchronous_callback(invocation, callback)
 
     def get_transaction(self, transaction_hash, callback=None):
         command = 'blockchain.transaction.get'
         invocation = lambda c: self.send([(command, [transaction_hash])], c)
 
-        return Network.__with_default_synchronous_callback(invocation, callback)
+        return BTCNetwork.__with_default_synchronous_callback(invocation, callback)
 
     def get_transactions(self, transaction_hashes, callback=None):
         command = 'blockchain.transaction.get'
         messages = [(command, [tx_hash]) for tx_hash in transaction_hashes]
         invocation = lambda c: self.send(messages, c)
 
-        return Network.__with_default_synchronous_callback(invocation, callback)
+        return BTCNetwork.__with_default_synchronous_callback(invocation, callback)
 
     def listunspent_for_scripthash(self, scripthash, callback=None):
         command = 'blockchain.scripthash.listunspent'
         invocation = lambda c: self.send([(command, [scripthash])], c)
 
-        return Network.__with_default_synchronous_callback(invocation, callback)
+        return BTCNetwork.__with_default_synchronous_callback(invocation, callback)
 
     def get_balance_for_scripthash(self, scripthash, callback=None):
         command = 'blockchain.scripthash.get_balance'
         invocation = lambda c: self.send([(command, [scripthash])], c)
 
-        return Network.__with_default_synchronous_callback(invocation, callback)
+        return BTCNetwork.__with_default_synchronous_callback(invocation, callback)
+
+    def get_address_history(self, address, callback=None):
+        command = 'blockchain.address.get_history'
+        invocation = lambda c: self.send([(command, [address])], c)
+
+        return BTCNetwork.__with_default_synchronous_callback(invocation, callback)
 
     def export_checkpoints(self, path):
         # run manually from the console to generate checkpoints
