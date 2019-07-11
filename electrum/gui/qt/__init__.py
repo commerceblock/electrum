@@ -65,6 +65,7 @@ except Exception as e:
 from .util import *   # * needed for plugins
 from .main_window import ElectrumWindow
 from .network_dialog import NetworkDialog
+from .mainstay_dialog import MainstayDialog
 
 
 class OpenFileEventFilter(QObject):
@@ -182,7 +183,7 @@ class ElectrumGui:
 
     def show_network_dialog(self, parent):
         if not self.daemon.network:
-            parent.show_warning(_('You are using Electrum in offline mode; restart Electrum if you want to get connected'), title=_('Offline'))
+            parent.show_warning(_('You are using the wallet in offline mode; restart the wallet if you want to get connected'), title=_('Offline'))
             return
         if self.nd:
             self.nd.on_update()
@@ -192,6 +193,19 @@ class ElectrumGui:
         self.nd = NetworkDialog(self.daemon.network, self.config,
                                 self.network_updated_signal_obj, self.daemon.network_btc)
         self.nd.show()
+
+    def show_mainstay_dialog(self, parent):
+        if not self.daemon.network:
+            parent.show_warning(_('You are using the wallet in offline mode; restart the wallet if you want to get connected'), title=_('Offline'))
+            return
+        if self.md:
+            self.md.on_update()
+            self.md.show()
+            self.md.raise_()
+            return
+        self.md = MainstayDialog(self.daemon.network, self.config,
+                                self.network_updated_signal_obj, self.daemon.network_btc)
+        self.md.show()
 
     def create_window_for_wallet(self, wallet):
         w = ElectrumWindow(self, wallet)

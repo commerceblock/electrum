@@ -2437,7 +2437,7 @@ class BTCNetwork(util.DaemonThread):
             return
 
         try:
-            out = Network.__wait_for(invocation)
+            out = BTCNetwork.__wait_for(invocation)
         except BaseException as e:
             return False, "error: " + str(e)
 
