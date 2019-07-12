@@ -38,7 +38,13 @@ def read_json(filename, default):
         r = default
     return r
 
-class OceanMainnet:
+class AbstractNet:
+
+    @classmethod
+    def max_checkpoint(cls) -> int:
+        return max(0, len(cls.BTC_CHECKPOINTS) * 2016 - 1)
+
+class OceanMainnet(AbstractNet):
 
     TESTNET = False
     BASIC_HEADER_SIZE = 172

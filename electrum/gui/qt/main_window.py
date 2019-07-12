@@ -113,7 +113,8 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         self.setup_exception_hook()
 
         self.network = gui_object.daemon.network
-        self.mainstay = gui_object.daemon.mainstay
+        self.mainstay = False
+        #gui_object.daemon.mainstay
         self.fx = gui_object.daemon.fx
         self.invoices = wallet.invoices
         self.contacts = wallet.contacts
