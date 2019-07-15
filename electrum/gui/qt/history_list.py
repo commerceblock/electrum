@@ -49,6 +49,7 @@ TX_ICONS = [
     "confirmed.png",
     "confirmed.png",
     "confirmed.png",
+    "mainstay-on.png"
 ]
 
 class HistoryList(MyTreeWidget, AcceptFileDragDrop):

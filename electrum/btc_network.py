@@ -1030,7 +1030,7 @@ class Network(Logger):
             raise Exception(f"{repr(tx_hash)} is not a txid")
         return await self.interface.session.send_request('blockchain.transaction.get', [tx_hash],
                                                          timeout=timeout)
-
+        
     @best_effort_reliable
     @catch_server_exceptions
     async def get_history_for_scripthash(self, sh: str) -> List[dict]:

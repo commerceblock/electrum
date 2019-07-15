@@ -10,13 +10,13 @@ import csv
 import decimal
 from decimal import Decimal
 
-from .bitcoin import COIN, CKD_pub, hash160_to_b58_address, rev_hex
+from .bitcoin import COIN, CKD_pub, hash160_to_b58_address, rev_hex, address_to_scripthash
 from .transaction import BTCTransaction, parse_redeemScript_multisig, multisig_script
 from .crypto import hash_160
 from .verifier import SPV
 from . import constants
 from .i18n import _
-from .util import PrintError, ThreadJob, make_dir, bh2u, bfh
+from .util import PrintError, ThreadJob, make_dir, bh2u, bfh, get_headers_dir
 
 class MainstayThread(ThreadJob):
 
@@ -28,6 +28,7 @@ class MainstayThread(ThreadJob):
         genesis = self.network.blockchain().read_header(0)
 #        self.tip = genesis.get('attestation_hash')
 #        self.base = genesis.get('attestation_hash')
+#        self.slot = genesis.get('mapping_hash')
         self.base = "ad026502dfb2f768dff215877b365e92427e9290bb98419032186e77adc6a4ad"
         self.slot = 2
         self.tip = self.base
@@ -37,14 +38,15 @@ class MainstayThread(ThreadJob):
         if len(self.base_pubkeys) != len(self.chaincodes): self.print_error("mainstay error: incorrect number of chaincodes")
         self.staychain = []
         self.height = 0
+        self.btc_height = 0
         self.synced = False
         self.verify_full_staychain = True
         self.load_staychain()
-        self.timeout = 10
+        self.timeout = time.time() + 5
 
 
     def path(self):
-        d = util.get_headers_dir(self.config)
+        d = get_headers_dir(self.config)
         filename = 'staychain'
         return os.path.join(d, filename)
 
@@ -67,8 +69,12 @@ class MainstayThread(ThreadJob):
             return True
         else:
             self.synced = False
-        txraw = self.btc.get_transaction(txid)
-        tx = BTCTransaction(txraw)
+        txraw = self.btc.run_from_another_thread(self.btc.get_transaction(txid, timeout=10))
+        try:
+            tx = BTCTransaction(txraw)
+        except:
+            self.print_error("invalid raw transaction from staychain")
+            return False
         #verify
         if self.verify_p2c_commitment(top_proof, tx) and self.verify_slot_proof(top_proof):
             btc_height = self.verify_btc_tx_path(top_proof, tx, txid)
@@ -103,6 +109,7 @@ class MainstayThread(ThreadJob):
                 self.print_error("init staychain commitment not in sidechain", commitment)
                 return False
         top_link.append(h)
+        self.height = h
         try:
             top_link.append(top_proof['response']['ops'])
         except:
@@ -120,30 +127,35 @@ class MainstayThread(ThreadJob):
             if txid == self.tip:
                 self.synced = True
                 self.tip = new_tip
-                self.height = new_height
+                self.btc_height = new_height
                 return True
             #check for signgle output
-            txraw = self.btc.get_transaction(txid)
-            tx = BTCTransaction(txraw)
+            txraw = self.btc.run_from_another_thread(self.btc.get_transaction(txid, timeout=10))
+            try:
+                tx = BTCTransaction(txraw)
+            except:
+                elf.print_error("invalid raw transaction from staychain")
+                return False
             script_addr = tx.outputs()[0][1]
-            addr_info = self.btc.get_address_history(script_addr)
+            sh = address_to_scripthash(script_addr)
+            addr_info = self.btc.run_from_another_thread(self.btc.get_history_for_scripthash(sh))
             for txh in addr_info:
                 if txh['tx_hash'] == txid: tx_height = txh['height']
-
             #full verification involves finding the merkle root from the staychain txid and then retieving the proof
             if self.verify_full_staychain:
                 attestation = self.get_attestation(txid)
                 if not attestation:
                     self.print_error("get mainstay attestation failed")
                     return False
-                m_root = attestation["response"]["attestation"]["merkle_root"]
+                try:
+                    m_root = attestation["response"]["attestation"]["merkle_root"]
+                except:
+                    self.print_error("get mainstay attestation malformed")
+                    return False
                 proof = self.get_slot_proof(m_root)
                 if not proof:
                     self.print_error("get mainstay proof failed")
                     return False
-                if btc_height < 582750: 
-                    print(attestation)
-                    print(proof)
                 if self.verify_p2c_commitment(proof, tx) and self.verify_slot_proof(proof):
                     btc_height = self.verify_btc_tx_path(proof, tx, txid)
                     if not btc_height: 
@@ -196,15 +208,14 @@ class MainstayThread(ThreadJob):
         self.staychain = r
         try:
             self.tip = self.staychain[0][1]
-            self.height = self.staychain[0][0]
+            self.btc_height = self.staychain[0][0]
+            self.height = self.staychain[0][3]
         except:
             pass
-        print("load: "+str(self.tip)+"  "+str(self.height))
 
     def write_staychain(self):
         #load in the staychain from file
         #if file not there, then initialise the staychain
-        print(self.path)
         try:
             with open(self.path(), 'w') as f:
                 json.dump(self.staychain,f)
@@ -315,10 +326,11 @@ class MainstayThread(ThreadJob):
         #verify the inclusion the proof transaction in the Bitcoin blockchain via SPV
         #returns the Bitcoin block hash and height. 
         script_addr = tx.outputs()[0][1]
-        addr_info = self.btc.get_address_history(script_addr)
+        sh = address_to_scripthash(script_addr)
+        addr_info = self.btc.run_from_another_thread(self.btc.get_history_for_scripthash(sh))
         for txh in addr_info:
             if txh['tx_hash'] == txid: tx_height = txh['height']
-        merkle_proof = self.btc.get_merkle_for_transaction(txid, tx_height)    
+        merkle_proof = self.btc.run_from_another_thread(self.btc.get_merkle_for_transaction(txid, tx_height))
         calculated_merkle_root = SPV.hash_merkle_root(merkle_proof["merkle"], txid, merkle_proof["pos"])
         conf_header = self.btc.blockchain().read_header(tx_height)
         if calculated_merkle_root == conf_header.get('merkle_root'):
@@ -334,15 +346,8 @@ class MainstayThread(ThreadJob):
             server_lag = self.network.get_local_height() - server_height
             btc_height = self.btc.get_server_height()
             btc_lag = self.btc.get_local_height() - btc_height
-            print("btc lag: "+str(btc_lag))
-            print(btc_height)
-            print(self.btc.get_local_height())
-            print("server lag: "+str(server_lag))
-            print(server_height)
-            print(self.network.get_local_height())
-            if server_lag < 2 and btc_lag < 2:     
+            if server_lag == 0 and btc_lag == 0:     
             #check mainstay API for new proofs every few minutes
                 synced = self.staychain_sync()
                 if synced: self.write_staychain()
-                print("synced: "+str(synced))
-            self.timeout = time.time() + 10
+            self.timeout = time.time() + 120

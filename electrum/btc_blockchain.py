@@ -103,7 +103,7 @@ def read_blockchains(config: 'SimpleConfig'):
             os.unlink(best_chain.path())
             best_chain.update_size()
     # forks
-    fdir = os.path.join(util.get_headers_dir(config), 'forks')
+    fdir = os.path.join(util.get_headers_dir(config), 'btc_forks')
     util.make_dir(fdir)
     # files are named as: fork2_{forkpoint}_{prev_hash}_{first_hash}
     l = filter(lambda x: x.startswith('fork2_') and '.' not in x, os.listdir(fdir))
@@ -316,7 +316,7 @@ class Blockchain(Logger):
     def path(self):
         d = util.get_headers_dir(self.config)
         if self.parent is None:
-            filename = 'blockchain_headers'
+            filename = 'btc_headers'
         else:
             assert self.forkpoint > 0, self.forkpoint
             prev_hash = self._prev_hash.lstrip('0')

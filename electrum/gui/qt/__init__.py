@@ -111,6 +111,7 @@ class ElectrumGui:
         self.app.installEventFilter(self.efilter)
         self.timer = Timer()
         self.nd = None
+        self.md = None
         self.network_updated_signal_obj = QNetworkUpdatedSignalObject()
         # init tray
         self.dark_icon = self.config.get("dark_icon", False)
@@ -191,7 +192,7 @@ class ElectrumGui:
             self.nd.raise_()
             return
         self.nd = NetworkDialog(self.daemon.network, self.config,
-                                self.network_updated_signal_obj, self.daemon.network_btc)
+                                self.network_updated_signal_obj)
         self.nd.show()
 
     def show_mainstay_dialog(self, parent):
@@ -204,7 +205,7 @@ class ElectrumGui:
             self.md.raise_()
             return
         self.md = MainstayDialog(self.daemon.network, self.config,
-                                self.network_updated_signal_obj, self.daemon.network_btc)
+                                self.network_updated_signal_obj, self.daemon.network_btc, self.daemon.mainstay)
         self.md.show()
 
     def create_window_for_wallet(self, wallet):

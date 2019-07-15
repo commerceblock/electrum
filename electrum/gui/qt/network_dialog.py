@@ -42,11 +42,11 @@ protocol_names = ['TCP', 'SSL']
 protocol_letters = 'ts'
 
 class NetworkDialog(QDialog):
-    def __init__(self, network, config, network_updated_signal_obj, network_btc):
+    def __init__(self, network, config, network_updated_signal_obj):
         QDialog.__init__(self)
         self.setWindowTitle(_('Network'))
         self.setMinimumSize(500, 20)
-        self.nlayout = NetworkChoiceLayout(network, config, False, network_btc)
+        self.nlayout = NetworkChoiceLayout(network, config, False)
         self.network_updated_signal_obj = network_updated_signal_obj
         vbox = QVBoxLayout(self)
         vbox.addLayout(self.nlayout.layout())
@@ -187,22 +187,19 @@ class ServerListWidget(QTreeWidget):
 
 class NetworkChoiceLayout(object):
 
-    def __init__(self, network, config, wizard=False, network_btc=None):
+    def __init__(self, network, config, wizard=False):
         self.network = network
-        self.network_btc = network_btc
         self.config = config
         self.protocol = None
         self.tor_proxy = None
 
         self.tabs = tabs = QTabWidget()
         server_tab = QWidget()
-        mainstay_tab = QWidget()
         mapping_tab = QWidget()
         proxy_tab = QWidget()
         blockchain_tab = QWidget()
         tabs.addTab(blockchain_tab, _('Overview'))
         tabs.addTab(server_tab, _('Server'))
-        tabs.addTab(mainstay_tab, _('Mainstay'))
         tabs.addTab(mapping_tab, _('Mapping'))
         tabs.addTab(proxy_tab, _('Proxy'))
 
@@ -212,95 +209,26 @@ class NetworkChoiceLayout(object):
 
         self.server_host = QLineEdit()
         self.server_host.setFixedWidth(200)
+        self.server_host.setEnabled(True)
         self.server_port = QLineEdit()
         self.server_port.setFixedWidth(60)
+        self.server_port.setEnabled(True)
 
         self.server_host.editingFinished.connect(self.set_server)
         self.server_port.editingFinished.connect(self.set_server)
 
-        grid.addWidget(QLabel(_('Server') + ':'), 1, 0)
-        grid.addWidget(self.server_host, 1, 1, 1, 2)
-        grid.addWidget(self.server_port, 1, 3)
+        grid.addWidget(QLabel(_('Server') + ':'), 0, 0)
+        grid.addWidget(self.server_host, 0, 1, 1, 2)
+        grid.addWidget(self.server_port, 0, 3)
 
         self.split_label = QLabel('')
-        grid.addWidget(self.split_label, 2, 0, 1, 3)
+        grid.addWidget(self.split_label, 1, 0, 1, 3)
 
         label = _('Server peers') if network.is_connected() else _('Default Servers')
-        grid.addWidget(QLabel(label), 3, 0, 1, 5)
+        grid.addWidget(QLabel(label), 2, 0, 1, 5)
         self.servers_list = ServerListWidget(self)
-        grid.addWidget(self.servers_list, 4, 0, 1, 5)
-
-        # mainstay tab
-        grid = QGridLayout(mainstay_tab)
-        grid.setSpacing(8)
-
-        self.mainstay_url = QLineEdit()
-        self.mainstay_url.setFixedWidth(270)
-        self.mainstayon = QCheckBox(_('Enable Mainstay'))
-        self.mainstayon.setEnabled(self.config.is_modifiable('mainstay_on'))
-
-        self.mainstay_url.editingFinished.connect(self.set_mainstay_url)
-        self.mainstayon.clicked.connect(self.set_mainstay_url)
-        self.mainstayon.clicked.connect(self.update)
-
-        msg = ' '.join([
-            _("Enabling Mainstay confirmations connects to the Bitcoin network and the Mainstay service. "),
-            _("This feature provides in-wallet SPV validation of the immutability of the asset chain. ")
-        ])
-        grid.addWidget(self.mainstayon, 0, 0, 1, 3)
-        grid.addWidget(HelpButton(msg), 0, 3)
-
-        grid.addWidget(QLabel(_('Connector URL') + ':'), 1, 0)
-        grid.addWidget(self.mainstay_url, 1, 1, 1, 4)
-
-
-
-
-
-
-
-
-
-
-        self.btc_server_host = QLineEdit()
-        self.btc_server_host.setFixedWidth(200)
-        self.btc_server_port = QLineEdit()
-        self.btc_server_port.setFixedWidth(60)
-        self.autoconnect_btc = QCheckBox(_('Select Bitcoin server automatically'))
-        self.autoconnect_btc.setEnabled(self.config.is_modifiable('btc_auto_connect'))
-
-        self.btc_server_host.editingFinished.connect(self.set_btc_server)
-        self.btc_server_port.editingFinished.connect(self.set_btc_server)
-        self.autoconnect_btc.clicked.connect(self.set_btc_server)
-        self.autoconnect_btc.clicked.connect(self.update)
-
-        msg = ' '.join([
-            _("If auto-connect is enabled, the transaction server used will correspond to the longest blockchain."),
-            _("If it is disabled, you have to choose a server you want to use. Electrum will warn you if your server is lagging.")
-        ])
-        grid.addWidget(self.autoconnect_btc, 2, 0, 1, 3)
-        grid.addWidget(HelpButton(msg), 2, 4)
-
-        grid.addWidget(QLabel(_('Server') + ':'), 3, 0)
-        grid.addWidget(self.btc_server_host, 3, 1, 1, 2)
-        grid.addWidget(self.btc_server_port, 3, 3)
-
-        self.split_label = QLabel('')
-        grid.addWidget(self.split_label, 5, 0, 1, 3)
-
-        self.btc_nodes_list_widget = NodesListWidget(self)
-        grid.addWidget(self.btc_nodes_list_widget, 7, 0, 1, 5)
-
-
-
-
-
-
-
-
-
-        grid.setRowStretch(7, 1)
-
+        self.servers_list.setEnabled(True)
+        grid.addWidget(self.servers_list, 3, 0, 1, 5)
 
         # mapping tab
         grid = QGridLayout(mapping_tab)
@@ -383,7 +311,7 @@ class NetworkChoiceLayout(object):
         # Blockchain Tab
         grid = QGridLayout(blockchain_tab)
         msg =  ' '.join([
-            _("Electrum connects to several nodes in order to download block headers and find out the longest blockchain."),
+            _("The CB wallet connects to servers in order to download block headers. "),
             _("This blockchain is used to verify the transactions sent by your transaction server.")
         ])
         self.status_label = QLabel('')
@@ -392,28 +320,16 @@ class NetworkChoiceLayout(object):
         grid.addWidget(HelpButton(msg), 0, 4)
 
         self.server_label = QLabel('')
-        msg = _("Electrum sends your wallet addresses to a single server, in order to receive your transaction history.")
+        msg = _("The CB wallet sends your wallet addresses to a single server, in order to receive your transaction history.")
         grid.addWidget(QLabel(_('Server') + ':'), 1, 0)
         grid.addWidget(self.server_label, 1, 1, 1, 3)
         grid.addWidget(HelpButton(msg), 1, 4)
 
         self.height_label = QLabel('')
         msg = _('This is the height of your local copy of the blockchain.')
-        grid.addWidget(QLabel(_('Assetchain') + ':'), 2, 0)
+        grid.addWidget(QLabel(_('picoChain') + ':'), 2, 0)
         grid.addWidget(self.height_label, 2, 1)
         grid.addWidget(HelpButton(msg), 2, 4)
-
-        if self.network_btc:
-            self.btc_height_label = QLabel('')
-            msg = _('This is the height of your local copy of the Bitcoin blockchain.')
-            grid.addWidget(QLabel(_('Bitcoin') + ':'), 3, 0)
-            grid.addWidget(self.btc_height_label, 3, 1)
-            grid.addWidget(HelpButton(msg), 3, 4)
-
-            self.btc_status_label = QLabel('')
-            grid.addWidget(QLabel(_('Status') + ':'), 4, 0)
-            grid.addWidget(self.btc_status_label, 4, 1, 1, 3)
-            grid.addWidget(HelpButton(msg), 4, 4)
 
         self.split_label = QLabel('')
         grid.addWidget(self.split_label, 5, 0, 1, 3)
@@ -438,23 +354,6 @@ class NetworkChoiceLayout(object):
         for w in [self.proxy_mode, self.proxy_host, self.proxy_port, self.proxy_user, self.proxy_password]:
             w.setEnabled(b)
 
-    def enable_set_server(self):
-        if self.config.is_modifiable('btc_server'):
-            enabled = not self.autoconnect_btc.isChecked()
-            self.btc_server_host.setEnabled(enabled)
-            self.btc_server_port.setEnabled(enabled)
-        else:
-            for w in [self.autoconnect_btc, self.btc_server_host, self.btc_server_port]:
-                w.setEnabled(False)
-
-    def enable_mainstay_url(self):
-        if self.config.is_modifiable('mainstay_url'):
-            enabled = self.mainstayon.isChecked()
-            self.mainstay_url.setEnabled(enabled)
-        else:
-            for w in [self.mainstayon, self.mainstay_url]:
-                w.setEnabled(False)
-
     def enable_set_mapping(self):
         if self.config.is_modifiable('mapping_url'):
             enabled = self.getmapping.isChecked()
@@ -465,16 +364,9 @@ class NetworkChoiceLayout(object):
 
     def update(self):
         host, port, protocol, proxy_config, auto_connect = self.network.get_parameters()
-        if self.network_btc:
-            host_btc, port_btc, protocol_btc, proxy_config_btc, auto_connect_btc, btc_oneserver = self.network_btc.get_parameters()
-            self.btc_server_host.setText(host_btc)
-            self.btc_server_port.setText(port_btc)        
-            self.autoconnect_btc.setChecked(auto_connect_btc)
 
         self.map_host.setText(self.network.mapping_server)
         self.getmapping.setChecked(self.network.get_mapping)
-        self.mainstay_url.setText(self.network.mainstay_server)
-        self.mainstayon.setChecked(self.network.mainstay_on)
 
         self.server_host.setText(host)
         self.server_port.setText(port)
@@ -486,22 +378,13 @@ class NetworkChoiceLayout(object):
         self.set_protocol(protocol)
         self.servers = self.network.get_servers()
         self.servers_list.update(self.servers, self.protocol, self.tor_cb.isChecked())
-        self.enable_set_server()
         self.enable_set_mapping()
-        self.enable_mainstay_url()
 
         height_str = "%d "%(self.network.get_local_height()) + _('blocks')
         self.height_label.setText(height_str)
         n = len(self.network.get_interfaces())
         status = _("Connected to {0} nodes.").format(n) if n else _("Not connected")
         self.status_label.setText(status)
-
-        if self.network_btc:
-            btc_height_str = "%d "%(self.network_btc.get_local_height()) + _('blocks')
-            self.btc_height_label.setText(btc_height_str)
-            n = len(self.network_btc.get_interfaces())
-            btc_status = _("Connected to {0} nodes.").format(n) if n else _("Not connected")
-            self.btc_status_label.setText(btc_status)
 
         chains = self.network.get_blockchains()
         if len(chains)>1:
@@ -515,8 +398,6 @@ class NetworkChoiceLayout(object):
             msg = ''
         self.split_label.setText(msg)
         self.nodes_list_widget.update(self.network)
-        if self.network_btc:
-            self.btc_nodes_list_widget.update(self.network_btc)
 
     def fill_in_proxy_settings(self):
         host, port, protocol, proxy_config, auto_connect = self.network.get_parameters()
@@ -596,19 +477,6 @@ class NetworkChoiceLayout(object):
         port = str(self.server_port.text())
         auto_connect = False
         self.network.set_parameters(host, port, protocol, proxy, auto_connect)
-
-    def set_btc_server(self):
-        if self.network_btc:
-            host, port, protocol, proxy, auto_connect = self.network_btc.get_parameters()
-            host = str(self.btc_server_host.text())
-            port = str(self.btc_server_port.text())
-            auto_connect = self.autoconnect_btc.isChecked()
-            self.network_btc.set_parameters(host, port, protocol, proxy, auto_connect)
-
-    def set_mainstay_url(self):
-        mainstay_url = str(self.mainstay_url.text())
-        mainstay_on = self.mainstayon.isChecked()
-        self.network.set_mainstay_url(mainstay_url,mainstay_on)
 
     def set_mapping(self):
         host = str(self.map_host.text())

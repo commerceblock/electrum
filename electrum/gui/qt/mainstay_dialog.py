@@ -27,6 +27,7 @@ import socket
 
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
 import PyQt5.QtCore as QtCore
 
@@ -36,16 +37,17 @@ from electrum.util import print_error
 from electrum.network import serialize_server, deserialize_server
 
 from .util import *
+from .network_dialog import NodesListWidget, TorDetector
 
 protocol_names = ['TCP', 'SSL']
 protocol_letters = 'ts'
 
 class MainstayDialog(QDialog):
-    def __init__(self, network, config, network_updated_signal_obj, network_btc):
+    def __init__(self, network, config, network_updated_signal_obj, network_btc, mainstay_thread):
         QDialog.__init__(self)
         self.setWindowTitle(_('Network'))
         self.setMinimumSize(500, 20)
-        self.nlayout = MainstayLayout(network, config, False, network_btc)
+        self.nlayout = MainstayLayout(network, config, False, network_btc, mainstay_thread)
         self.network_updated_signal_obj = network_updated_signal_obj
         vbox = QVBoxLayout(self)
         vbox.addLayout(self.nlayout.layout())
@@ -61,202 +63,25 @@ class MainstayDialog(QDialog):
         self.nlayout.update()
 
 
-
-class NodesListWidget(QTreeWidget):
-
-    def __init__(self, parent):
-        QTreeWidget.__init__(self)
-        self.parent = parent
-        self.setHeaderLabels([_('Connected node'), _('Height')])
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.create_menu)
-
-    def create_menu(self, position):
-        item = self.currentItem()
-        if not item:
-            return
-        is_server = not bool(item.data(0, Qt.UserRole))
-        menu = QMenu()
-        if is_server:
-            server = item.data(1, Qt.UserRole)
-            menu.addAction(_("Use as server"), lambda: self.parent.follow_server(server))
-        else:
-            index = item.data(1, Qt.UserRole)
-            menu.addAction(_("Follow this branch"), lambda: self.parent.follow_branch(index))
-        menu.exec_(self.viewport().mapToGlobal(position))
-
-    def keyPressEvent(self, event):
-        if event.key() in [ Qt.Key_F2, Qt.Key_Return ]:
-            self.on_activated(self.currentItem(), self.currentColumn())
-        else:
-            QTreeWidget.keyPressEvent(self, event)
-
-    def on_activated(self, item, column):
-        # on 'enter' we show the menu
-        pt = self.visualItemRect(item).bottomLeft()
-        pt.setX(50)
-        self.customContextMenuRequested.emit(pt)
-
-    def update(self, network):
-        self.clear()
-        self.addChild = self.addTopLevelItem
-        chains = network.get_blockchains()
-        n_chains = len(chains)
-        for k, items in chains.items():
-            b = network.blockchains[k]
-            name = b.get_name()
-            if n_chains >1:
-                x = QTreeWidgetItem([name + '@%d'%b.get_forkpoint(), '%d'%b.height()])
-                x.setData(0, Qt.UserRole, 1)
-                x.setData(1, Qt.UserRole, b.forkpoint)
-            else:
-                x = self
-            for i in items:
-                star = ' *' if i == network.interface else ''
-                item = QTreeWidgetItem([i.host + star, '%d'%i.tip])
-                item.setData(0, Qt.UserRole, 0)
-                item.setData(1, Qt.UserRole, i.server)
-                x.addChild(item)
-            if n_chains>1:
-                self.addTopLevelItem(x)
-                x.setExpanded(True)
-
-        h = self.header()
-        h.setStretchLastSection(False)
-        h.setSectionResizeMode(0, QHeaderView.Stretch)
-        h.setSectionResizeMode(1, QHeaderView.ResizeToContents)
-
-
-class ServerListWidget(QTreeWidget):
-
-    def __init__(self, parent):
-        QTreeWidget.__init__(self)
-        self.parent = parent
-        self.setHeaderLabels([_('Host'), _('Port')])
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.create_menu)
-
-    def create_menu(self, position):
-        item = self.currentItem()
-        if not item:
-            return
-        menu = QMenu()
-        server = item.data(1, Qt.UserRole)
-        menu.addAction(_("Use as server"), lambda: self.set_server(server))
-        menu.exec_(self.viewport().mapToGlobal(position))
-
-    def set_server(self, s):
-        host, port, protocol = deserialize_server(s)
-        self.parent.server_host.setText(host)
-        self.parent.server_port.setText(port)
-        self.parent.set_server()
-
-    def keyPressEvent(self, event):
-        if event.key() in [ Qt.Key_F2, Qt.Key_Return ]:
-            self.on_activated(self.currentItem(), self.currentColumn())
-        else:
-            QTreeWidget.keyPressEvent(self, event)
-
-    def on_activated(self, item, column):
-        # on 'enter' we show the menu
-        pt = self.visualItemRect(item).bottomLeft()
-        pt.setX(50)
-        self.customContextMenuRequested.emit(pt)
-
-    def update(self, servers, protocol, use_tor):
-        self.clear()
-        for _host, d in sorted(servers.items()):
-            if _host.endswith('.onion') and not use_tor:
-                continue
-            port = d.get(protocol)
-            if port:
-                x = QTreeWidgetItem([_host, port])
-                server = serialize_server(_host, port, protocol)
-                x.setData(1, Qt.UserRole, server)
-                self.addTopLevelItem(x)
-
-        h = self.header()
-        h.setStretchLastSection(False)
-        h.setSectionResizeMode(0, QHeaderView.Stretch)
-        h.setSectionResizeMode(1, QHeaderView.ResizeToContents)
-
-
 class MainstayLayout(object):
 
-    def __init__(self, network, config, wizard=False, network_btc=None):
+    def __init__(self, network, config, wizard=False, network_btc=None, mainstay_thread=None):
         self.network = network
         self.network_btc = network_btc
+        self.mainstay_thread = mainstay_thread
         self.config = config
         self.protocol = None
         self.tor_proxy = None
 
         self.tabs = tabs = QTabWidget()
-        server_tab = QWidget()
         mainstay_tab = QWidget()
-        mapping_tab = QWidget()
-        proxy_tab = QWidget()
-        blockchain_tab = QWidget()
-        tabs.addTab(blockchain_tab, _('Overview'))
-        tabs.addTab(server_tab, _('Server'))
+        network_tab = QWidget()
         tabs.addTab(mainstay_tab, _('Mainstay'))
-        tabs.addTab(mapping_tab, _('Mapping'))
-        tabs.addTab(proxy_tab, _('Proxy'))
+        tabs.addTab(network_tab, _('Network'))
 
-        # server tab
-        grid = QGridLayout(server_tab)
+        # network tab
+        grid = QGridLayout(network_tab)
         grid.setSpacing(8)
-
-        self.server_host = QLineEdit()
-        self.server_host.setFixedWidth(200)
-        self.server_port = QLineEdit()
-        self.server_port.setFixedWidth(60)
-
-        self.server_host.editingFinished.connect(self.set_server)
-        self.server_port.editingFinished.connect(self.set_server)
-
-        grid.addWidget(QLabel(_('Server') + ':'), 1, 0)
-        grid.addWidget(self.server_host, 1, 1, 1, 2)
-        grid.addWidget(self.server_port, 1, 3)
-
-        self.split_label = QLabel('')
-        grid.addWidget(self.split_label, 2, 0, 1, 3)
-
-        label = _('Server peers') if network.is_connected() else _('Default Servers')
-        grid.addWidget(QLabel(label), 3, 0, 1, 5)
-        self.servers_list = ServerListWidget(self)
-        grid.addWidget(self.servers_list, 4, 0, 1, 5)
-
-        # mainstay tab
-        grid = QGridLayout(mainstay_tab)
-        grid.setSpacing(8)
-
-        self.mainstay_url = QLineEdit()
-        self.mainstay_url.setFixedWidth(270)
-        self.mainstayon = QCheckBox(_('Enable Mainstay'))
-        self.mainstayon.setEnabled(self.config.is_modifiable('mainstay_on'))
-
-        self.mainstay_url.editingFinished.connect(self.set_mainstay_url)
-        self.mainstayon.clicked.connect(self.set_mainstay_url)
-        self.mainstayon.clicked.connect(self.update)
-
-        msg = ' '.join([
-            _("Enabling Mainstay confirmations connects to the Bitcoin network and the Mainstay service. "),
-            _("This feature provides in-wallet SPV validation of the immutability of the asset chain. ")
-        ])
-        grid.addWidget(self.mainstayon, 0, 0, 1, 3)
-        grid.addWidget(HelpButton(msg), 0, 3)
-
-        grid.addWidget(QLabel(_('Connector URL') + ':'), 1, 0)
-        grid.addWidget(self.mainstay_url, 1, 1, 1, 4)
-
-
-
-
-
-
-
-
-
 
         self.btc_server_host = QLineEdit()
         self.btc_server_host.setFixedWidth(200)
@@ -272,7 +97,7 @@ class MainstayLayout(object):
 
         msg = ' '.join([
             _("If auto-connect is enabled, the transaction server used will correspond to the longest blockchain."),
-            _("If it is disabled, you have to choose a server you want to use. Electrum will warn you if your server is lagging.")
+            _("If it is disabled, you have to choose a server you want to use. CB wallet will warn you if your server is lagging.")
         ])
         grid.addWidget(self.autoconnect_btc, 2, 0, 1, 3)
         grid.addWidget(HelpButton(msg), 2, 4)
@@ -287,152 +112,90 @@ class MainstayLayout(object):
         self.btc_nodes_list_widget = NodesListWidget(self)
         grid.addWidget(self.btc_nodes_list_widget, 7, 0, 1, 5)
 
-
-
-
-
-
-
-
-
-        grid.setRowStretch(7, 1)
-
-
-        # mapping tab
-        grid = QGridLayout(mapping_tab)
-        grid.setSpacing(8)
-
-        self.map_host = QLineEdit()
-        self.map_host.setFixedWidth(270)
-        self.getmapping = QCheckBox(_('Retrieve asset mapping data'))
-        self.getmapping.setEnabled(self.config.is_modifiable('get_map'))
-
-        self.defaultmappingurl = QPushButton(_('Default'))
-
-        self.map_host.editingFinished.connect(self.set_mapping)
-        self.getmapping.clicked.connect(self.set_mapping)
-        self.getmapping.clicked.connect(self.update)
-        self.defaultmappingurl.clicked.connect(self.default_mapping_url)
-
-        msg = ' '.join([
-            _("If asset mapping is enabled, the wallet will retrieve the asset mapping object from the remote server and authenticate it. "),
-            _("Asset information is then displayed in the Assets tab.")
-        ])
-        grid.addWidget(self.getmapping, 0, 0, 1, 3)
-        grid.addWidget(HelpButton(msg), 0, 3)
-
-        grid.addWidget(QLabel(_('Asset map URL') + ':'), 1, 0)
-        grid.addWidget(self.map_host, 1, 1, 1, 4)
-        grid.addWidget(self.defaultmappingurl,2,0,1,1)
-
-        grid.setRowStretch(7, 1)
-
-        # Proxy tab
-        grid = QGridLayout(proxy_tab)
-        grid.setSpacing(8)
-
-        # proxy setting
-        self.proxy_cb = QCheckBox(_('Use proxy'))
-        self.proxy_cb.clicked.connect(self.check_disable_proxy)
-        self.proxy_cb.clicked.connect(self.set_proxy)
-
-        self.proxy_mode = QComboBox()
-        self.proxy_mode.addItems(['SOCKS4', 'SOCKS5', 'HTTP'])
-        self.proxy_host = QLineEdit()
-        self.proxy_host.setFixedWidth(200)
-        self.proxy_port = QLineEdit()
-        self.proxy_port.setFixedWidth(60)
-        self.proxy_user = QLineEdit()
-        self.proxy_user.setPlaceholderText(_("Proxy user"))
-        self.proxy_password = QLineEdit()
-        self.proxy_password.setPlaceholderText(_("Password"))
-        self.proxy_password.setEchoMode(QLineEdit.Password)
-        self.proxy_password.setFixedWidth(60)
-
-        self.proxy_mode.currentIndexChanged.connect(self.set_proxy)
-        self.proxy_host.editingFinished.connect(self.set_proxy)
-        self.proxy_port.editingFinished.connect(self.set_proxy)
-        self.proxy_user.editingFinished.connect(self.set_proxy)
-        self.proxy_password.editingFinished.connect(self.set_proxy)
-
-        self.proxy_mode.currentIndexChanged.connect(self.proxy_settings_changed)
-        self.proxy_host.textEdited.connect(self.proxy_settings_changed)
-        self.proxy_port.textEdited.connect(self.proxy_settings_changed)
-        self.proxy_user.textEdited.connect(self.proxy_settings_changed)
-        self.proxy_password.textEdited.connect(self.proxy_settings_changed)
-
-        self.tor_cb = QCheckBox(_("Use Tor Proxy"))
-        self.tor_cb.setIcon(QIcon(":icons/tor_logo.png"))
-        self.tor_cb.hide()
-        self.tor_cb.clicked.connect(self.use_tor_proxy)
-
-        grid.addWidget(self.tor_cb, 1, 0, 1, 3)
-        grid.addWidget(self.proxy_cb, 2, 0, 1, 3)
-        grid.addWidget(HelpButton(_('Proxy settings apply to all connections: with Electrum servers, but also with third-party services.')), 2, 4)
-        grid.addWidget(self.proxy_mode, 4, 1)
-        grid.addWidget(self.proxy_host, 4, 2)
-        grid.addWidget(self.proxy_port, 4, 3)
-        grid.addWidget(self.proxy_user, 5, 2)
-        grid.addWidget(self.proxy_password, 5, 3)
         grid.setRowStretch(7, 1)
 
         # Blockchain Tab
-        grid = QGridLayout(blockchain_tab)
-        msg =  ' '.join([
-            _("Electrum connects to several nodes in order to download block headers and find out the longest blockchain."),
-            _("This blockchain is used to verify the transactions sent by your transaction server.")
+        grid = QGridLayout(mainstay_tab)
+
+        self.mainstay_url = QLineEdit()
+        self.mainstay_url.setFixedWidth(270)
+        self.mainstayon = QCheckBox(_('Enable Mainstay'))
+        self.mainstayon.setEnabled(self.config.is_modifiable('mainstay_on'))
+
+        self.mainstay_url.editingFinished.connect(self.set_mainstay_url)
+        self.mainstayon.clicked.connect(self.set_mainstay_url)
+        self.mainstayon.clicked.connect(self.update)
+
+        msg = ' '.join([
+            _("Enabling Mainstay confirmations connects to the Bitcoin network and the Mainstay service. "),
+            _("This feature provides in-wallet SPV validation of the immutability of the picoChain. ")
         ])
-        self.status_label = QLabel('')
-        grid.addWidget(QLabel(_('Status') + ':'), 0, 0)
-        grid.addWidget(self.status_label, 0, 1, 1, 3)
+
+        grid.addWidget(self.mainstayon, 0, 0, 1, 3)
         grid.addWidget(HelpButton(msg), 0, 4)
 
-        self.server_label = QLabel('')
-        msg = _("Electrum sends your wallet addresses to a single server, in order to receive your transaction history.")
-        grid.addWidget(QLabel(_('Server') + ':'), 1, 0)
-        grid.addWidget(self.server_label, 1, 1, 1, 3)
+        msg = _("This is the URL of the Mainstay connector service to retrieve slot-proofs")
+        grid.addWidget(QLabel(_('Connector URL') + ':'), 1, 0)
+        grid.addWidget(self.mainstay_url, 1, 1, 1, 2)
         grid.addWidget(HelpButton(msg), 1, 4)
 
-        self.height_label = QLabel('')
-        msg = _('This is the height of your local copy of the blockchain.')
-        grid.addWidget(QLabel(_('Assetchain') + ':'), 2, 0)
-        grid.addWidget(self.height_label, 2, 1)
-        grid.addWidget(HelpButton(msg), 2, 4)
+        if self.network_btc and self.mainstay_thread:
 
-        if self.network_btc:
-            self.btc_height_label = QLabel('')
-            msg = _('This is the height of your local copy of the Bitcoin blockchain.')
-            grid.addWidget(QLabel(_('Bitcoin') + ':'), 3, 0)
-            grid.addWidget(self.btc_height_label, 3, 1)
+            msg = _("This is the base transaction ID of the Bitcoin staychain committed to the picoChain genesis block.")
+            self.mainstay_base = QLineEdit()
+            self.mainstay_base.setFixedWidth(270)
+            self.mainstay_base.setText(self.mainstay_thread.base)
+            self.mainstay_base.setReadOnly(True)
+            grid.addWidget(QLabel(_('Staychain base') + ':'), 2, 0)
+            grid.addWidget(self.mainstay_base, 2, 1, 1, 2)
+            grid.addWidget(HelpButton(msg), 2, 4)
+
+            msg =  _("This is the staychain slot ID committed to the picoChain genesis block")
+            self.slot_label = QLabel(str(self.mainstay_thread.slot))
+            grid.addWidget(QLabel(_('Slot ID') + ':'), 3, 0)
+            grid.addWidget(self.slot_label, 3, 1, 1, 3)
             grid.addWidget(HelpButton(msg), 3, 4)
 
+            grid.addWidget(QLabel(''), 5, 0)
+            grid.addWidget(QLabel(_('Bitcoin')), 6, 0)
+            grid.addWidget(QLabel(_(' ')), 6, 1)
+            grid.addWidget(QLabel(_('picoChain')), 6, 2)
+
+            msg =  _("Connection status of the Bitcoin blockchain and the picoChain")
             self.btc_status_label = QLabel('')
-            grid.addWidget(QLabel(_('Status') + ':'), 4, 0)
-            grid.addWidget(self.btc_status_label, 4, 1, 1, 3)
-            grid.addWidget(HelpButton(msg), 4, 4)
+            self.status_label = QLabel('')
+            grid.addWidget(self.btc_status_label, 7, 0)
+            grid.addWidget(QLabel(_('Connection')), 7, 1)
+            grid.addWidget(self.status_label, 7, 2)        
 
-        self.split_label = QLabel('')
-        grid.addWidget(self.split_label, 5, 0, 1, 3)
+            msg =  _("The heights of the local verified Bitcoin blockchain and picoChain")
+            self.btc_height_label = QLabel('')
+            self.height_label = QLabel('')
+            grid.addWidget(self.btc_height_label, 8, 0)
+            grid.addWidget(QLabel(_('Height')), 8, 1)
+            grid.addWidget(self.height_label, 8, 2)
+            grid.addWidget(HelpButton(msg), 8, 4)        
 
-        self.nodes_list_widget = NodesListWidget(self)
-        grid.addWidget(self.nodes_list_widget, 7, 0, 1, 5)
+            msg =  _("The height of the latest Bitcoin attestation and the committed picoChain height")
+            self.btc_attest_height_label = QLabel('')
+            self.attest_height_label = QLabel('')
+            grid.addWidget(self.btc_attest_height_label, 9, 0)
+            grid.addWidget(QLabel(_('Attested')), 9, 1)
+            grid.addWidget(self.attest_height_label, 9, 2)
+            grid.addWidget(HelpButton(msg), 9, 4)
+
+            grid.setRowStretch(10, 1)
+
+        else:
+            grid.setRowStretch(2, 1)
+
+
 
         vbox = QVBoxLayout()
         vbox.addWidget(tabs)
         self.layout_ = vbox
-        # tor detector
-        self.td = td = TorDetector()
-        td.found_proxy.connect(self.suggest_proxy)
-        td.start()
 
-        self.fill_in_proxy_settings()
         self.update()
-
-    def check_disable_proxy(self, b):
-        if not self.config.is_modifiable('proxy'):
-            b = False
-        for w in [self.proxy_mode, self.proxy_host, self.proxy_port, self.proxy_user, self.proxy_password]:
-            w.setEnabled(b)
 
     def enable_set_server(self):
         if self.config.is_modifiable('btc_server'):
@@ -451,92 +214,42 @@ class MainstayLayout(object):
             for w in [self.mainstayon, self.mainstay_url]:
                 w.setEnabled(False)
 
-    def enable_set_mapping(self):
-        if self.config.is_modifiable('mapping_url'):
-            enabled = self.getmapping.isChecked()
-            self.map_host.setEnabled(enabled)
-        else:
-            for w in [self.getmapping, self.map_host]:
-                w.setEnabled(False)
-
     def update(self):
-        host, port, protocol, proxy_config, auto_connect = self.network.get_parameters()
+
         if self.network_btc:
-            host_btc, port_btc, protocol_btc, proxy_config_btc, auto_connect_btc = self.network_btc.get_parameters()
+            host, port, protocol, proxy_config, auto_connect = self.network.get_parameters()
+            host_btc, port_btc, protocol_btc, proxy_config_btc, auto_connect_btc, oneserver = self.network_btc.get_parameters()
             self.btc_server_host.setText(host_btc)
             self.btc_server_port.setText(port_btc)        
             self.autoconnect_btc.setChecked(auto_connect_btc)
 
-        self.map_host.setText(self.network.mapping_server)
-        self.getmapping.setChecked(self.network.get_mapping)
         self.mainstay_url.setText(self.network.mainstay_server)
         self.mainstayon.setChecked(self.network.mainstay_on)
 
-        self.server_host.setText(host)
-        self.server_port.setText(port)
-
-        interface = self.network.interface
-        host = interface.host if interface else _('None')
-        self.server_label.setText(host)
-
-        self.set_protocol(protocol)
-        self.servers = self.network.get_servers()
-        self.servers_list.update(self.servers, self.protocol, self.tor_cb.isChecked())
-        self.enable_set_server()
-        self.enable_set_mapping()
         self.enable_mainstay_url()
 
-        height_str = "%d "%(self.network.get_local_height()) + _('blocks')
-        self.height_label.setText(height_str)
-        n = len(self.network.get_interfaces())
-        status = _("Connected to {0} nodes.").format(n) if n else _("Not connected")
-        self.status_label.setText(status)
+        if self.network_btc and self.mainstay_thread:
 
-        if self.network_btc:
-            btc_height_str = "%d "%(self.network_btc.get_local_height()) + _('blocks')
+            height_str = str(self.network.get_local_height())
+            self.height_label.setText(height_str)
+            n = len(self.network.get_interfaces())
+            status = _("{0} nodes").format(n)
+            self.status_label.setText(status)
+
+            btc_height_str = str(self.network_btc.get_local_height())
             self.btc_height_label.setText(btc_height_str)
             n = len(self.network_btc.get_interfaces())
-            btc_status = _("Connected to {0} nodes.").format(n) if n else _("Not connected")
+            btc_status = _("{0} nodes").format(n)
             self.btc_status_label.setText(btc_status)
 
-        chains = self.network.get_blockchains()
-        if len(chains)>1:
-            chain = self.network.blockchain()
-            forkpoint = chain.get_forkpoint()
-            name = chain.get_name()
-            msg = _('Chain split detected at block {0}').format(forkpoint) + '\n'
-            msg += (_('You are following branch') if auto_connect else _('Your server is on branch'))+ ' ' + name
-            msg += ' (%d %s)' % (chain.get_branch_size(), _('blocks'))
-        else:
-            msg = ''
-        self.split_label.setText(msg)
-        self.nodes_list_widget.update(self.network)
-        if self.network_btc:
             self.btc_nodes_list_widget.update(self.network_btc)
 
-    def fill_in_proxy_settings(self):
-        host, port, protocol, proxy_config, auto_connect = self.network.get_parameters()
-        if not proxy_config:
-            proxy_config = {"mode": "none", "host": "localhost", "port": "9050"}
-
-        b = proxy_config.get('mode') != "none"
-        self.check_disable_proxy(b)
-        if b:
-            self.proxy_cb.setChecked(True)
-            self.proxy_mode.setCurrentIndex(
-                self.proxy_mode.findText(str(proxy_config.get("mode").upper())))
-
-        self.proxy_host.setText(proxy_config.get("host"))
-        self.proxy_port.setText(proxy_config.get("port"))
-        self.proxy_user.setText(proxy_config.get("user", ""))
-        self.proxy_password.setText(proxy_config.get("password", ""))
+            if self.mainstay_thread.synced:
+                self.btc_attest_height_label.setText(str(self.mainstay_thread.btc_height))
+                self.attest_height_label.setText(str(self.mainstay_thread.height))
 
     def layout(self):
         return self.layout_
-
-    def set_protocol(self, protocol):
-        if protocol != self.protocol:
-            self.protocol = protocol
 
     def change_protocol(self, use_ssl):
         p = 's' if use_ssl else 't'
@@ -550,48 +263,8 @@ class MainstayLayout(object):
         self.set_protocol(p)
         self.set_server()
 
-    def follow_branch(self, index):
-        self.network.follow_chain(index)
-        self.update()
-
-    def follow_server(self, server):
-        self.network.switch_to_interface(server)
-        host, port, protocol, proxy, auto_connect = self.network.get_parameters()
-        host, port, protocol = deserialize_server(server)
-        self.network.set_parameters(host, port, protocol, proxy, auto_connect)
-        self.update()
-
-    def server_changed(self, x):
-        if x:
-            self.change_server(str(x.text(0)), self.protocol)
-
-    def change_server(self, host, protocol):
-        pp = self.servers.get(host, constants.net.DEFAULT_PORTS)
-        if protocol and protocol not in protocol_letters:
-            protocol = None
-        if protocol:
-            port = pp.get(protocol)
-            if port is None:
-                protocol = None
-        if not protocol:
-            if 's' in pp.keys():
-                protocol = 's'
-                port = pp.get(protocol)
-            else:
-                protocol = list(pp.keys())[0]
-                port = pp.get(protocol)
-        self.server_host.setText(host)
-        self.server_port.setText(port)
-
     def accept(self):
         pass
-
-    def set_server(self):
-        host, port, protocol, proxy, auto_connect = self.network.get_parameters()
-        host = str(self.server_host.text())
-        port = str(self.server_port.text())
-        auto_connect = False
-        self.network.set_parameters(host, port, protocol, proxy, auto_connect)
 
     def set_btc_server(self):
         if self.network_btc:
@@ -605,88 +278,3 @@ class MainstayLayout(object):
         mainstay_url = str(self.mainstay_url.text())
         mainstay_on = self.mainstayon.isChecked()
         self.network.set_mainstay_url(mainstay_url,mainstay_on)
-
-    def set_mapping(self):
-        host = str(self.map_host.text())
-        get_map = self.getmapping.isChecked()
-        self.network.set_mapping(get_map, host)
-
-    def default_mapping_url(self):
-        from PyQt5.QtCore import pyqtRemoveInputHook
-        from pdb import set_trace
-        pyqtRemoveInputHook()
-        set_trace()
-        mapping_url=self.network.default_mapping()
-        self.map_host.setText(mapping_url)
-
-    def set_proxy(self):
-        host, port, protocol, proxy, auto_connect = self.network.get_parameters()
-        if self.proxy_cb.isChecked():
-            proxy = { 'mode':str(self.proxy_mode.currentText()).lower(),
-                      'host':str(self.proxy_host.text()),
-                      'port':str(self.proxy_port.text()),
-                      'user':str(self.proxy_user.text()),
-                      'password':str(self.proxy_password.text())}
-        else:
-            proxy = None
-            self.tor_cb.setChecked(False)
-        self.network.set_parameters(host, port, protocol, proxy, auto_connect)
-
-    def suggest_proxy(self, found_proxy):
-        self.tor_proxy = found_proxy
-        self.tor_cb.setText("Use Tor proxy at port " + str(found_proxy[1]))
-        if self.proxy_mode.currentIndex() == self.proxy_mode.findText('SOCKS5') \
-            and self.proxy_host.text() == "127.0.0.1" \
-                and self.proxy_port.text() == str(found_proxy[1]):
-            self.tor_cb.setChecked(True)
-        self.tor_cb.show()
-
-    def use_tor_proxy(self, use_it):
-        if not use_it:
-            self.proxy_cb.setChecked(False)
-        else:
-            socks5_mode_index = self.proxy_mode.findText('SOCKS5')
-            if socks5_mode_index == -1:
-                print_error("[network_dialog] can't find proxy_mode 'SOCKS5'")
-                return
-            self.proxy_mode.setCurrentIndex(socks5_mode_index)
-            self.proxy_host.setText("127.0.0.1")
-            self.proxy_port.setText(str(self.tor_proxy[1]))
-            self.proxy_user.setText("")
-            self.proxy_password.setText("")
-            self.tor_cb.setChecked(True)
-            self.proxy_cb.setChecked(True)
-        self.check_disable_proxy(use_it)
-        self.set_proxy()
-
-    def proxy_settings_changed(self):
-        self.tor_cb.setChecked(False)
-
-
-class TorDetector(QThread):
-    found_proxy = pyqtSignal(object)
-
-    def __init__(self):
-        QThread.__init__(self)
-
-    def run(self):
-        # Probable ports for Tor to listen at
-        ports = [9050, 9150]
-        for p in ports:
-            if TorDetector.is_tor_port(p):
-                self.found_proxy.emit(("127.0.0.1", p))
-                return
-
-    @staticmethod
-    def is_tor_port(port):
-        try:
-            s = (socket._socketobject if hasattr(socket, "_socketobject") else socket.socket)(socket.AF_INET, socket.SOCK_STREAM)
-            s.settimeout(0.1)
-            s.connect(("127.0.0.1", port))
-            # Tor responds uniquely to HTTP-like requests
-            s.send(b"GET\n")
-            if b"Tor is not an HTTP Proxy" in s.recv(1024):
-                return True
-        except socket.error:
-            pass
-        return False
