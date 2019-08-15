@@ -89,13 +89,14 @@ class MainstayThread(ThreadJob):
         #find the top height
         chaintip = self.network.get_local_height()
         try:
-            merkle_root = top_proof['response']['txid']
+            merkle_root = top_proof['response']['merkle_root']
             commitment = top_proof['response']['commitment']
         except:
            self.print_error("staychain proof malformed")
            return False
         top_link = []
         top_link.append(btc_height)
+        top_link.append(txid)
         top_link.append(merkle_root)
         top_link.append(commitment)
         if commitment == '0'*64:
@@ -116,7 +117,6 @@ class MainstayThread(ThreadJob):
             self.print_error("staychain proof malformed")
             return False
         self.staychain.insert(0,top_link)
-        print(top_link)
         new_height = btc_height
         #then move down the staychain verifying the proofs as we go
         nc = 1
@@ -171,7 +171,8 @@ class MainstayThread(ThreadJob):
                     return False
                 link = []
                 link.append(tx_height)
-                link.append(txid) 
+                link.append(txid)
+                link.append(m_root)
                 link.append(commit)
                 hi = h
                 if commit == '0'*64:
@@ -195,7 +196,8 @@ class MainstayThread(ThreadJob):
                 link.append(None)
             print(link)
             self.staychain.insert(nc,link)
-        return None
+            nc = nc + 1
+        return False
 
     def load_staychain(self):
         #load in the staychain from file
@@ -209,7 +211,7 @@ class MainstayThread(ThreadJob):
         try:
             self.tip = self.staychain[0][1]
             self.btc_height = self.staychain[0][0]
-            self.height = self.staychain[0][3]
+            self.height = self.staychain[0][4]
         except:
             pass
 
