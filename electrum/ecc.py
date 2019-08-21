@@ -425,7 +425,7 @@ class ECPrivkey(ECPubkey):
 
     def decrypt_message(self, encrypted, magic=b'BIE1', get_ephemeral=False, decode=base64.b64decode, ephemeral_pubkey_bytes:bytes=None):
         encrypted = decode(encrypted)
-        if len(encrypted) < 85:
+        if len(encrypted) < 101:
             raise Exception('invalid ciphertext: length')
         magic_found = encrypted[:4]
         if ephemeral_pubkey_bytes == None:
