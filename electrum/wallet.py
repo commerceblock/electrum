@@ -74,13 +74,12 @@ def relayfee(network):
     from .simple_config import FEERATE_DEFAULT_RELAY
     MAX_RELAY_FEE = 50000
     f = network.relay_fee if network and network.relay_fee else FEERATE_DEFAULT_RELAY
+    f = constants.net.MIN_RELAY_TX_FEE if hasattr(constants.net, 'MIN_RELAY_TX_FEE') else f
     return min(f, MAX_RELAY_FEE)
 
 def dust_threshold(network):
     # Change <= dust threshold is added to the tx fee
-#    return 182 * 3 * relayfee(network) / 1000
-    return 0
-
+    return 182 * 3 * relayfee(network) / 1000
 
 def append_utxos_to_inputs(inputs, network, pubkey, txin_type, imax):
     if txin_type != 'p2pk':
