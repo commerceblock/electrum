@@ -34,13 +34,16 @@ from .jsonrpc import VerifyingJSONRPCServer
 
 from .version import ELECTRUM_VERSION
 from .network import Network
+from .btc_network import Network as BTCNetwork
 from .util import json_decode, DaemonThread
-from .util import print_error, to_string
+from .util import print_error, 
+from .btc_util import create_and_start_event_loop
 from .wallet import Wallet
 from .storage import WalletStorage
 from .commands import known_commands, Commands
 from .simple_config import SimpleConfig
 from .exchange_rate import FxThread
+from .mainstay import MainstayThread
 from .plugin import run_hook
 
 
@@ -122,14 +125,26 @@ class Daemon(DaemonThread):
     def __init__(self, config, fd, is_gui):
         DaemonThread.__init__(self)
         self.config = config
+        self.asyncio_loop, self._stop_loop, self._loop_thread = create_and_start_event_loop()
         if config.get('offline'):
             self.network = None
+            self.network_btc = None
         else:
             self.network = Network(config)
             self.network.start()
+            if config.get('mainstay_on', False):
+                self.network_btc = BTCNetwork(config)
+                self.network_btc._loop_thread = self._loop_thread
+                self.network_btc.start()
+                self.mainstay = MainstayThread(config, self.network, self.network_btc)
+            else:
+                self.network_btc = None
+                self.mainstay = None
         self.fx = FxThread(config, self.network)
         if self.network:
             self.network.add_jobs([self.fx])
+            if self.network_btc:
+                self.network.add_jobs([self.mainstay])
         self.gui = None
         self.wallets = {}
         # Setup JSONRPC server
@@ -166,6 +181,7 @@ class Daemon(DaemonThread):
         return True
 
     def run_daemon(self, config_options):
+        asyncio.set_event_loop(self.asyncio_loop)
         config = SimpleConfig(config_options)
         sub = config.get('subcommand')
         assert sub in [None, 'start', 'stop', 'status', 'load_wallet', 'close_wallet']
@@ -256,9 +272,11 @@ class Daemon(DaemonThread):
 
     def stop_wallet(self, path):
         wallet = self.wallets.pop(path)
+        if not wallet: return
         wallet.stop_threads()
 
     def run_cmdline(self, config_options):
+        asyncio.set_event_loop(self.asyncio_loop)
         password = config_options.get('password')
         new_password = config_options.get('new_password')
         config = SimpleConfig(config_options)
@@ -296,9 +314,18 @@ class Daemon(DaemonThread):
             self.print_error("shutting down network")
             self.network.stop()
             self.network.join()
+        if self.network_btc:
+            self.print_error("shutting down btc network")
+            self.network_btc.stop()
+#            self.network_btc.join()
+        # stop event loop
+        self.asyncio_loop.call_soon_threadsafe(self._stop_loop.set_result, 1)
+        self._loop_thread.join(timeout=1)
         self.on_stop()
 
     def stop(self):
+        if self.gui:
+            self.gui.stop()
         self.print_error("stopping, removing lockfile")
         remove_lockfile(get_lockfile(self.config))
         DaemonThread.stop(self)

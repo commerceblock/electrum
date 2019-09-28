@@ -44,11 +44,12 @@ TX_ICONS = [
     "unconfirmed.png",
     "offline_tx.png",
     "confirmed.png",
-    "confirmed.png",
-    "confirmed.png",
-    "confirmed.png",
-    "confirmed.png",
-    "confirmed.png",
+    "clock1.png",
+    "clock2.png",
+    "clock3.png",
+    "clock4.png",
+    "clock5.png",
+    "clock6.png"
 ]
 
 class HistoryList(MyTreeWidget, AcceptFileDragDrop):
