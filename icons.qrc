@@ -6,6 +6,7 @@
     <file>icons/clock3.png</file>
     <file>icons/clock4.png</file>
     <file>icons/clock5.png</file>
+    <file>icons/clock6.png</file>
     <file>icons/confirmed.png</file>
     <file>icons/copy.png</file>
     <file>icons/digitalbitbox.png</file>
@@ -35,6 +36,8 @@
     <file>icons/status_disconnected.png</file>
     <file>icons/status_waiting.png</file>
     <file>icons/status_lagging.png</file>
+    <file>icons/mainstay-on.png</file>
+    <file>icons/mainstay-off.png</file>
     <file>icons/seal.png</file>
     <file>icons/speaker.png</file>
     <file>icons/trezor_unpaired.png</file>

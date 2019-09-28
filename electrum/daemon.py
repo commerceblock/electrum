@@ -36,7 +36,7 @@ from .version import ELECTRUM_VERSION
 from .network import Network
 from .btc_network import Network as BTCNetwork
 from .util import json_decode, DaemonThread
-from .util import print_error, 
+from .util import print_error, to_string
 from .btc_util import create_and_start_event_loop
 from .wallet import Wallet
 from .storage import WalletStorage

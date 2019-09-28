@@ -32,7 +32,7 @@ import PyQt5.QtCore as QtCore
 
 from electrum.i18n import _
 from electrum import constants
-from electrum import btc_blockchain as blockchain
+from electrum import btc_blockchain as btc_blockchain
 from electrum.util import print_error
 from electrum.network import serialize_server, deserialize_server
 
@@ -107,7 +107,7 @@ class NodesListWidget(QTreeWidget):
             try:
                 b = network.blockchains[k]
             except:
-                b = blockchain.blockchains.get(k)
+                b = btc_blockchain.blockchains.get(k)
             name = b.get_name()
             if n_chains >1:
                 x = QTreeWidgetItem([name + '@%d'%b.get_forkpoint(), '%d'%b.height()])
@@ -344,7 +344,7 @@ class NetworkChoiceLayout(object):
 
         self.height_label = QLabel('')
         msg = _('This is the height of your local copy of the blockchain.')
-        grid.addWidget(QLabel(_(constants.net.WALLETTITLE+'Blockchain') + ':'), 3, 0)
+        grid.addWidget(QLabel(_(constants.net.WALLETTITLE+' chain') + ':'), 3, 0)
         grid.addWidget(self.height_label, 3, 1)
         grid.addWidget(HelpButton(msg), 3, 4)
 
@@ -381,7 +381,6 @@ class NetworkChoiceLayout(object):
 
     def update(self):
         host, port, protocol, proxy_config, auto_connect = self.network.get_parameters()
-
         self.map_host.setText(self.network.mapping_server)
         self.getmapping.setChecked(self.network.get_mapping)
 

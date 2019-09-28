@@ -110,6 +110,11 @@ def pick_random_server(hostmap = None, protocol = 's', exclude_set = set()):
     eligible = list(set(filter_protocol(hostmap, protocol)) - exclude_set)
     return random.choice(eligible) if eligible else None
 
+def pick_random_btc_server(hostmap = None, protocol = 't', exclude_set = set()):
+    if hostmap is None:
+        hostmap = constants.net.BTC_DEFAULT_SERVERS
+    eligible = list(set(filter_protocol(hostmap, protocol)) - exclude_set)
+    return random.choice(eligible) if eligible else None
 
 from .simple_config import SimpleConfig
 
@@ -181,7 +186,7 @@ class Network(util.DaemonThread):
             config = {}  # Do not use mutables as default values!
         util.DaemonThread.__init__(self)
         self.config = SimpleConfig(config) if isinstance(config, dict) else config
-        self.num_server = 10 if not self.config.get('oneserver') else 0
+        self.num_server = 1 if not self.config.get('oneserver') else 0
         self.blockchains = blockchain.read_blockchains(self.config)  # note: needs self.blockchains_lock
         self.print_error("blockchains", self.blockchains.keys())
         self.blockchain_index = config.get('blockchain_index', 0)
@@ -190,6 +195,7 @@ class Network(util.DaemonThread):
         # Server for addresses and transactions
         self.default_server = self.config.get('server', None)
         self.mapping_server = self.config.get('mapping_url', constants.net.MAPPING_URL)
+        self.mainstay_server = self.config.get('mainstay_url', constants.net.MAINSTAY_URL)
         # Sanitize default server
         if self.default_server:
             try:
@@ -241,6 +247,7 @@ class Network(util.DaemonThread):
         self.interfaces = {}               # note: needs self.interface_lock
         self.auto_connect = self.config.get('auto_connect', True)
         self.get_mapping = self.config.get('get_map', False)
+        self.mainstay_on = self.config.get('mainstay_on', False)
         self.connecting = set()
         self.requested_chunks = set()
         self.socket_queue = queue.Queue()
@@ -518,6 +525,12 @@ class Network(util.DaemonThread):
         self.connecting = set()
         # Get a new queue - no old pending connections thanks!
         self.socket_queue = queue.Queue()
+
+    def set_mainstay_url(self, mainstay_url, mainstay_on):
+        self.config.set_key('mainstay_url', mainstay_url, False)
+        self.config.set_key('mainstay_on', mainstay_on, True)
+        self.mainstay_on = mainstay_on
+        self.mainstay_server = mainstay_url
 
     def set_mapping(self, get_map, mapping_url):
         self.config.set_key('mapping_url', mapping_url, False)

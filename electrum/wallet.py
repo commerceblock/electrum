@@ -196,7 +196,9 @@ class Abstract_Wallet(AddressSynchronizer):
         self.coin_price_cache = {}
 
     def get_block_height(self):
-        return self.network.get_local_height()
+        if self.network:
+            return self.network.get_local_height()
+        else: return 0
 
     def load_and_cleanup(self):
         self.load_keystore()
@@ -536,7 +538,7 @@ class Abstract_Wallet(AddressSynchronizer):
             else:
                 status = 2
         else:
-            status = 3 + min(conf, 6)
+            status = 4
         time_str = format_time(timestamp) if timestamp else _("unknown")
         status_str = TX_STATUS[status] if status < 4 else time_str
         if extra:
