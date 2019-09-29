@@ -332,7 +332,7 @@ class Network(Logger):
     def _read_recent_servers(self):
         if not self.config.path:
             return []
-        path = os.path.join(self.config.path, "recent_servers")
+        path = os.path.join(self.config.path, "recent_btc_servers")
         try:
             with open(path, "r", encoding='utf-8') as f:
                 data = f.read()
@@ -344,7 +344,7 @@ class Network(Logger):
     def _save_recent_servers(self):
         if not self.config.path:
             return
-        path = os.path.join(self.config.path, "recent_servers")
+        path = os.path.join(self.config.path, "recent_btc_servers")
         s = json.dumps(self.recent_servers, indent=4, sort_keys=True)
         try:
             with open(path, "w", encoding='utf-8') as f:

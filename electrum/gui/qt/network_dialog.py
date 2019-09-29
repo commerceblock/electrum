@@ -198,10 +198,10 @@ class NetworkChoiceLayout(object):
         mapping_tab = QWidget()
         proxy_tab = QWidget()
         blockchain_tab = QWidget()
-        tabs.addTab(blockchain_tab, _('Overview'))
-        tabs.addTab(server_tab, _('Server'))
-        tabs.addTab(mapping_tab, _('Mapping'))
-        tabs.addTab(proxy_tab, _('Proxy'))
+        tabs.addTab(blockchain_tab, _(' Overview '))
+        tabs.addTab(server_tab, _(' Server '))
+        tabs.addTab(mapping_tab, _(' Mapping '))
+        tabs.addTab(proxy_tab, _(' Proxy '))
 
         # server tab
         grid = QGridLayout(server_tab)

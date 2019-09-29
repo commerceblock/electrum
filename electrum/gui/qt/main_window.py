@@ -3327,9 +3327,9 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         gui_widgets.append((qr_label, qr_combo))
 
         colortheme_combo = QComboBox()
-        colortheme_combo.addItem(_('Dark'), 'default')
+        colortheme_combo.addItem(_('Dark'), 'dark')
         colortheme_combo.addItem(_('Light'), 'light')
-        index = colortheme_combo.findData(self.config.get('qt_gui_color_theme', 'default'))
+        index = colortheme_combo.findData(self.config.get('qt_gui_color_theme', 'light'))
         colortheme_combo.setCurrentIndex(index)
         colortheme_label = QLabel(_('Color theme') + ':')
         def on_colortheme(x):
@@ -3517,10 +3517,10 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
             ]
         else:
             tabs_info = [
-                (fee_widgets, _('Fees')),
-                (tx_widgets, _('Transactions')),
-                (gui_widgets, _('Appearance')),
-                (id_widgets, _('Identity')),
+                (fee_widgets, _(' Fees ')),
+                (tx_widgets, _(' Transactions ')),
+                (gui_widgets, _(' Appearance ')),
+                (id_widgets, _(' Identity ')),
             ]
 
         for widgets, name in tabs_info:
@@ -3552,7 +3552,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
 
         run_hook('close_settings_dialog')
         if self.need_restart:
-            self.show_warning(_('Please restart Electrum to activate the new GUI settings'), title=_('Success'))
+            self.show_warning(_('Please restart Ocean wallet to activate the new GUI settings'), title=_('Success'))
 
 
     def closeEvent(self, event):

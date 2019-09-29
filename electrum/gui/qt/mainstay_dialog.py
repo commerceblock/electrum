@@ -76,8 +76,8 @@ class MainstayLayout(object):
         self.tabs = tabs = QTabWidget()
         mainstay_tab = QWidget()
         network_tab = QWidget()
-        tabs.addTab(mainstay_tab, _('Mainstay'))
-        tabs.addTab(network_tab, _('Bitcoin Network'))
+        tabs.addTab(mainstay_tab, _(' Mainstay '))
+        tabs.addTab(network_tab, _(' Bitcoin Network '))
 
         # network tab
         grid = QGridLayout(network_tab)
