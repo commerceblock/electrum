@@ -66,7 +66,11 @@ class MainstayThread(ThreadJob):
             return True
         else:
             self.synced = False
-        txraw = self.btc.run_from_another_thread(self.btc.get_transaction(txid, timeout=10))
+        try:
+            txraw = self.btc.run_from_another_thread(self.btc.get_transaction(txid, timeout=10))
+        except:
+            self.print_error("failed to get get raw transaction from staychain")
+            return False            
         try:
             tx = BTCTransaction(txraw)
         except:
@@ -118,6 +122,7 @@ class MainstayThread(ThreadJob):
         #then move down the staychain verifying the proofs as we go
         nc = 1
         scan = True
+        print(top_link)
         while scan:
             txid = tx.inputs()[0]['prevout_hash']
             #when the staychain reaches the root commitment, syncing is complete
@@ -193,6 +198,7 @@ class MainstayThread(ThreadJob):
                 link.append(None)
             self.staychain.insert(nc,link)
             nc = nc + 1
+            print(link)
         return False
 
     def load_staychain(self):
@@ -282,7 +288,7 @@ class MainstayThread(ThreadJob):
             tweaked_keys.append(bh2u(cK))
         m,n,_,_,_ = parse_redeemScript_multisig(bytes.fromhex(self.script))
         tweaked_script = multisig_script(tweaked_keys, m)
-        return hash160_to_b58_address(hash_160(bytes.fromhex(tweaked_script)), 5)
+        return hash160_to_b58_address(hash_160(bytes.fromhex(tweaked_script)), constants.net.ADDRTYPE_P2SH)
 
     def verify_p2c_commitment(self, proof, tx):
         #verify the pay-to-contract proof merkle root in the Bitcoin transaction
@@ -336,6 +342,17 @@ class MainstayThread(ThreadJob):
             self.print_error("invalid SPV proof for mainstay commitment")
             return 0
 
+    def get_confirmation_height(self, height):
+        # get the BTC confirmation height for a sidechain confirmation height
+        cheight = self.staychain[0][4]
+        btc_height = self.staychain[0][0]
+        for attest in self.staychain:
+            if height > attest[4] and height <= cheight:
+                return btc_height
+            cheight = attest[4]
+            btc_height = attest[0]
+        return self.staychain[-1][0]
+
     def run(self):
         if self.timeout <= time.time():
         #check that both btc blockchain and asset chain are synced. 
@@ -347,4 +364,4 @@ class MainstayThread(ThreadJob):
             #check mainstay API for new proofs every few minutes
                 synced = self.staychain_sync()
                 if synced: self.write_staychain()
-            self.timeout = time.time() + 120
+            self.timeout = time.time() + 60

@@ -253,9 +253,9 @@ class HistoryList(MyTreeWidget, AcceptFileDragDrop):
             rmass = str("%.6f" % (float(balance)*tokrat/1.0E+8))
             rmass_str = rmass+" oz "
             if self.config.get('mainstay_on', False):
-                if self.parent.mainstay.synced and height >= self.parent.mainstay.height:
+                if self.parent.mainstay.synced and height <= self.parent.mainstay.height:
                     btc_height = self.parent.gui_object.daemon.network_btc.get_local_height()
-                    btc_conf = btc_height - self.parent.mainstay.btc_height + 1
+                    btc_conf = btc_height - self.parent.mainstay.get_confirmation_height(height) + 1
                 else:
                     btc_conf = 0
             else:
