@@ -126,6 +126,7 @@ class MainstayLayout(object):
         self.mainstay_url.editingFinished.connect(self.set_mainstay_url)
         self.mainstayon.clicked.connect(self.set_mainstay_url)
         self.mainstayon.clicked.connect(self.update)
+        self.mainstayon.clicked.connect(self.need_restart)
 
         msg = ' '.join([
             _("Enabling Mainstay confirmations connects to the Bitcoin Electrum server network and the Mainstay service. "),
@@ -164,31 +165,38 @@ class MainstayLayout(object):
             bclabel.setFixedWidth(100)
             pclabel = QLabel(_(constants.net.WALLETTITLE+' chain'))
             pclabel.setFixedWidth(100)
+            self.synclabel = QLabel(_(''))
+            self.synclabel.setAlignment(Qt.AlignCenter)
             bclabel.setAlignment(Qt.AlignCenter)
             pclabel.setAlignment(Qt.AlignCenter)
-            bclabel.setStyleSheet("color: rgb(90, 90, 90); background: rgb(210, 210, 210)")
-            pclabel.setStyleSheet("color: rgb(90, 90, 90); background: rgb(210, 210, 210)")
+            bclabel.setStyleSheet("color: rgb(80, 80, 80); background: rgb(199, 213, 255)")
+            pclabel.setStyleSheet("color: rgb(80, 80, 80); background: rgb(199, 213, 255)")
             grid.addWidget(bclabel, 6, 0)
-            grid.addWidget(QLabel(_(' ')), 6, 1)
+            grid.addWidget(self.synclabel, 6, 1)
             grid.addWidget(pclabel, 6, 2)
 
             msg =  _("Connection status of the Bitcoin blockchain and the "+constants.net.WALLETTITLE+" chain")
             self.btc_status_label = QLabel('')
             self.btc_status_label.setAlignment(Qt.AlignCenter)
+            self.btc_status_label.setStyleSheet('color: rgb(50, 50, 50); background: rgb(220, 220, 220)') 
             self.status_label = QLabel('')
             self.status_label.setAlignment(Qt.AlignCenter)
+            self.status_label.setStyleSheet('color: rgb(50, 50, 50); background: rgb(220, 220, 220)') 
             grid.addWidget(self.btc_status_label, 7, 0)
             conlabel = QLabel(_('-  Connection  -'))
             conlabel.setAlignment(Qt.AlignCenter)
             conlabel.setStyleSheet('color: rgb(90, 90, 90)')
             grid.addWidget(conlabel, 7, 1)
-            grid.addWidget(self.status_label, 7, 2)        
+            grid.addWidget(self.status_label, 7, 2)
+            grid.addWidget(HelpButton(msg), 7, 4)  
 
             msg =  _("The heights of the local verified Bitcoin blockchain and the "+constants.net.WALLETTITLE+" chain")
             self.btc_height_label = QLabel('')
             self.btc_height_label.setAlignment(Qt.AlignCenter)
+            self.btc_height_label.setStyleSheet('color: rgb(50, 50, 50); background: rgb(220, 220, 220)') 
             self.height_label = QLabel('')
             self.height_label.setAlignment(Qt.AlignCenter)
+            self.height_label.setStyleSheet('color: rgb(50, 50, 50); background: rgb(220, 220, 220)') 
             grid.addWidget(self.btc_height_label, 8, 0)
             hlabel = QLabel(_('-  Height  -'))
             hlabel.setAlignment(Qt.AlignCenter)
@@ -200,12 +208,14 @@ class MainstayLayout(object):
             msg =  _("The height of the latest Bitcoin attestation and the committed the "+constants.net.WALLETTITLE+" chain height")
             self.btc_attest_height_label = QLabel('')
             self.btc_attest_height_label.setAlignment(Qt.AlignCenter)
+            self.btc_attest_height_label.setStyleSheet('color: rgb(50, 50, 50); background: rgb(220, 220, 220)') 
             self.attest_height_label = QLabel('')
             self.attest_height_label.setAlignment(Qt.AlignCenter)
+            self.attest_height_label.setStyleSheet('color: rgb(50, 50, 50); background: rgb(220, 220, 220)') 
             alabel = QLabel(_('-  Attested  -'))
-            alabel.setAlignment(Qt.AlignCenter) 
-            alabel.setStyleSheet('color: rgb(90, 90, 90); background: rgb(210, 210, 210)')           
+            alabel.setAlignment(Qt.AlignCenter)           
             grid.addWidget(self.btc_attest_height_label, 9, 0)
+            alabel.setStyleSheet('color: rgb(90, 90, 90)')
             grid.addWidget(alabel, 9, 1)
             grid.addWidget(self.attest_height_label, 9, 2)
             grid.addWidget(HelpButton(msg), 9, 4)
@@ -273,6 +283,10 @@ class MainstayLayout(object):
             if self.mainstay_thread.synced:
                 self.btc_attest_height_label.setText(str(self.mainstay_thread.btc_height))
                 self.attest_height_label.setText(str(self.mainstay_thread.height))
+                self.synclabel.setText(_(''))
+            else:
+                self.synclabel.setText(_('Synchronizing ...'))
+                self.synclabel.setStyleSheet('color: rgb(90, 90, 90)')                
 
     def layout(self):
         return self.layout_
@@ -304,3 +318,10 @@ class MainstayLayout(object):
         mainstay_url = str(self.mainstay_url.text())
         mainstay_on = self.mainstayon.isChecked()
         self.network.set_mainstay_url(mainstay_url,mainstay_on)
+
+    def need_restart(self):
+        restart_mesaage = QMessageBox()
+        restart_mesaage.setText("Please restart Ocean wallet to activate the new Mainstay settings")
+        restart_mesaage.setIcon(QMessageBox.Information)
+        restart_mesaage.exec_()
+

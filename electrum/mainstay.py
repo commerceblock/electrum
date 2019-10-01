@@ -122,7 +122,6 @@ class MainstayThread(ThreadJob):
         #then move down the staychain verifying the proofs as we go
         nc = 1
         scan = True
-        print(top_link)
         while scan:
             txid = tx.inputs()[0]['prevout_hash']
             #when the staychain reaches the root commitment, syncing is complete
