@@ -547,6 +547,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         # Settings / Preferences are all reserved keywords in macOS using this as work around
         tools_menu.addAction(_("&Preferences") if sys.platform == 'darwin' else _("Preferences"), self.settings_dialog)
         tools_menu.addAction(_("&Network"), lambda: self.gui_object.show_network_dialog(self))
+        tools_menu.addAction(_("&Mainstay"), lambda: self.gui_object.show_mainstay_dialog(self))
         tools_menu.addSeparator()
         tools_menu.addAction(_("&Sign/verify message"), self.sign_verify_message)
         tools_menu.addAction(_("&Encrypt/decrypt message"), self.encrypt_message)
