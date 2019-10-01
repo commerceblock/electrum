@@ -118,7 +118,8 @@ class MainstayLayout(object):
         grid = QGridLayout(mainstay_tab)
 
         self.mainstay_url = QLineEdit()
-        self.mainstay_url.setFixedWidth(270)
+        self.mainstay_url.setFixedWidth(260)
+        self.mainstay_url.setStyleSheet("color: rgb(60, 60, 60); background: rgb(240, 240, 240)")
         self.mainstayon = QCheckBox(_('Enable Mainstay'))
         self.mainstayon.setEnabled(self.config.is_modifiable('mainstay_on'))
 
@@ -127,8 +128,8 @@ class MainstayLayout(object):
         self.mainstayon.clicked.connect(self.update)
 
         msg = ' '.join([
-            _("Enabling Mainstay confirmations connects to the Bitcoin network and the Mainstay service. "),
-            _("This feature provides in-wallet SPV validation of the immutability of the picoChain. ")
+            _("Enabling Mainstay confirmations connects to the Bitcoin Electrum server network and the Mainstay service. "),
+            _("This feature provides in-wallet SPV verification of the immutability of the "+constants.net.WALLETTITLE+" chain.")
         ])
 
         grid.addWidget(self.mainstayon, 0, 0, 1, 3)
@@ -141,18 +142,18 @@ class MainstayLayout(object):
 
         if self.network_btc and self.mainstay_thread:
 
-            msg = _("This is the base transaction ID of the Bitcoin staychain committed to the picoChain genesis block.")
+            msg = _("This is the base transaction ID of the Bitcoin staychain committed to the "+constants.net.WALLETTITLE+" chain genesis block.")
             self.mainstay_base = QLineEdit()
-            self.mainstay_base.setFixedWidth(270)
+            self.mainstay_base.setFixedWidth(260)
             self.mainstay_base.setText(self.mainstay_thread.base)
             self.mainstay_base.setReadOnly(True)
             self.mainstay_base.setCursorPosition(0);
-            self.mainstay_base.setStyleSheet("color: rgb(90, 90, 90); background: rgb(210, 210, 210)")
+            self.mainstay_base.setStyleSheet("color: rgb(100, 100, 100); background: rgb(230, 230, 230)")
             grid.addWidget(QLabel(_('Staychain base') + ':'), 2, 0)
             grid.addWidget(self.mainstay_base, 2, 1, 1, 2)
             grid.addWidget(HelpButton(msg), 2, 4)
 
-            msg =  _("This is the staychain slot ID committed to the picoChain genesis block")
+            msg =  _("This is the staychain slot ID committed to the "+constants.net.WALLETTITLE+" chain genesis block.")
             self.slot_label = QLabel(str(self.mainstay_thread.slot))
             grid.addWidget(QLabel(_('Slot ID') + ':'), 3, 0)
             grid.addWidget(self.slot_label, 3, 1, 1, 3)
@@ -160,9 +161,13 @@ class MainstayLayout(object):
 
             grid.addWidget(QLabel(''), 5, 0)
             bclabel = QLabel(_('Bitcoin'))
+            bclabel.setFixedWidth(100)
             pclabel = QLabel(_(constants.net.WALLETTITLE+' chain'))
+            pclabel.setFixedWidth(100)
             bclabel.setAlignment(Qt.AlignCenter)
             pclabel.setAlignment(Qt.AlignCenter)
+            bclabel.setStyleSheet("color: rgb(90, 90, 90); background: rgb(210, 210, 210)")
+            pclabel.setStyleSheet("color: rgb(90, 90, 90); background: rgb(210, 210, 210)")
             grid.addWidget(bclabel, 6, 0)
             grid.addWidget(QLabel(_(' ')), 6, 1)
             grid.addWidget(pclabel, 6, 2)
@@ -199,7 +204,7 @@ class MainstayLayout(object):
             self.attest_height_label.setAlignment(Qt.AlignCenter)
             alabel = QLabel(_('-  Attested  -'))
             alabel.setAlignment(Qt.AlignCenter) 
-            alabel.setStyleSheet('color: rgb(90, 90, 90)')           
+            alabel.setStyleSheet('color: rgb(90, 90, 90); background: rgb(210, 210, 210)')           
             grid.addWidget(self.btc_attest_height_label, 9, 0)
             grid.addWidget(alabel, 9, 1)
             grid.addWidget(self.attest_height_label, 9, 2)

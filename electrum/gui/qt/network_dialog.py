@@ -343,7 +343,7 @@ class NetworkChoiceLayout(object):
         grid.addWidget(HelpButton(msg), 2, 4)
 
         self.height_label = QLabel('')
-        msg = _('This is the height of your local copy of the blockchain.')
+        msg = _('This is the height of your local copy of the '+constants.net.WALLETTITLE+' blockchain.')
         grid.addWidget(QLabel(_(constants.net.WALLETTITLE+' chain') + ':'), 3, 0)
         grid.addWidget(self.height_label, 3, 1)
         grid.addWidget(HelpButton(msg), 3, 4)
