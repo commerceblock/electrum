@@ -324,6 +324,7 @@ class NetworkChoiceLayout(object):
         gen_box.setFixedWidth(200)
         gen_box.setCursorPosition(0);
         gen_box.setStyleSheet("color: rgb(100, 100, 100); background: rgb(230, 230, 230)")
+        gen_box.setFont(QFont(MONOSPACE_FONT))
         grid.addWidget(gen_box, 0, 2, 1, 2)
         grid.addWidget(HelpButton(msg), 0, 4)
 

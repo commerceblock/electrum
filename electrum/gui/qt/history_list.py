@@ -234,7 +234,7 @@ class HistoryList(MyTreeWidget, AcceptFileDragDrop):
         if fx: fx.history_used_spot = False
         blue_brush = QBrush(QColor("#1E1EFF"))
         red_brush = QBrush(QColor("#BC1E1E"))
-        monospace_font = QFont(MONOSPACE_FONT)
+        monospace_font = QFont(MONOSPACE_FONT,13)
         for tx_item in self.transactions:
             tx_hash = tx_item['txid']
             height = tx_item['height']

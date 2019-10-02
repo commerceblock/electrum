@@ -149,6 +149,7 @@ class MainstayLayout(object):
             self.mainstay_base.setText(self.mainstay_thread.base)
             self.mainstay_base.setReadOnly(True)
             self.mainstay_base.setCursorPosition(0);
+            self.mainstay_base.setFont(QFont(MONOSPACE_FONT))
             self.mainstay_base.setStyleSheet("color: rgb(100, 100, 100); background: rgb(230, 230, 230)")
             grid.addWidget(QLabel(_('Staychain base') + ':'), 2, 0)
             grid.addWidget(self.mainstay_base, 2, 1, 1, 2)

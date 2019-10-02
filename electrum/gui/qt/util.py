@@ -18,7 +18,7 @@ from electrum.paymentrequest import PR_UNPAID, PR_PAID, PR_EXPIRED
 if platform.system() == 'Windows':
     MONOSPACE_FONT = 'Lucida Console'
 elif platform.system() == 'Darwin':
-    MONOSPACE_FONT = 'Monaco'
+    MONOSPACE_FONT = 'Andale Mono'
 else:
     MONOSPACE_FONT = 'monospace'
 
