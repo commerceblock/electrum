@@ -638,6 +638,8 @@ class Abstract_Wallet(AddressSynchronizer):
                 contr = self.contracts[0]
             except:
                 contr = self.contracts
+            if constants.net.TXCONTRACTHASH:
+                contr = constants.net.TXCONTRACTHASH
             op_return_script = '6a20' + "".join(reversed([contr[i:i+2] for i in range(0, len(contr), 2)]))
             tx.add_outputs([TxOutput(TYPE_SCRIPT,op_return_script,0,1,asset,1)])
 
