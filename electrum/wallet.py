@@ -2013,7 +2013,7 @@ class Multisig_Wallet(Deterministic_Wallet):
     def get_kyc_string(self, password=None):
         address=self.get_unused_encryption_address()
         if address == None:
-            return "No wallet encryption keys available."
+            return False, "No wallet encryption keys available."
         onboardUserPubKey=self.get_public_key(address)
 
         onboardUserKey_serialized, redeem_script = self.export_private_key(address, password, False)   
@@ -2022,7 +2022,7 @@ class Multisig_Wallet(Deterministic_Wallet):
       
         onboardPubKey=self.get_unassigned_kyc_pubkey()
         if onboardPubKey is None:
-            return "No unassigned KYC public keys available."
+            return False, "No unassigned KYC public keys available."
 
         ss = StringIO()
 
