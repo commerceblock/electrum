@@ -100,6 +100,7 @@ class TcpConnection(threading.Thread, util.PrintError):
         return False
 
     def get_simple_socket(self):
+        print("gss", self.host, self.use_ssl)
         try:
             l = socket.getaddrinfo(self.host, self.port, socket.AF_UNSPEC, socket.SOCK_STREAM)
         except socket.gaierror:
@@ -113,8 +114,10 @@ class TcpConnection(threading.Thread, util.PrintError):
                 s.connect(res[4])
                 s.settimeout(30)
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+                print("ok", self.host)
                 return s
             except BaseException as _e:
+                print(_e, self.host)
                 e = _e
                 continue
         else:
@@ -146,7 +149,8 @@ class TcpConnection(threading.Thread, util.PrintError):
                     s = context.wrap_socket(s, do_handshake_on_connect=True)
                 except ssl.SSLError as e:
                     self.print_error(e)
-                except:
+                except Exception as e:
+                    print(e)
                     return
                 else:
                     try:
@@ -167,7 +171,8 @@ class TcpConnection(threading.Thread, util.PrintError):
                 except ssl.SSLError as e:
                     self.print_error("SSL error retrieving SSL certificate:", e)
                     return
-                except:
+                except Exception as e:
+                    print(e)
                     return
 
                 try:
