@@ -157,7 +157,7 @@ class HistoryScreen(CScreen):
     def update(self, see_all=False):
         if self.app.wallet is None:
             return
-        history = reversed(self.app.wallet.get_history())
+        history = reversed(self.app.wallet.get_history(self.app.wallet.get_receiving_addresses()))
         history_card = self.screen.ids.history_container
         history_card.data = [self.get_card(*item) for item in history]
 
@@ -482,3 +482,10 @@ class TabbedCarousel(Factory.TabbedPanel):
             self.carousel.add_widget(widget)
             return
         super(TabbedCarousel, self).add_widget(widget, index=index)
+
+
+from .kyc_import import KycImportDialog
+from .kyc_export import KycExportDialog
+from .kyc_register import KycRegisterDialog
+
+

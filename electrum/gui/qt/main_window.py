@@ -65,7 +65,7 @@ from .transaction_dialog import show_transaction
 from .util import *
 from .installwizard import WIF_HELP_TEXT
 from electrum.transaction import Transaction, TxOutput, TYPE_SCRIPT
-
+from electrum.messages import kyc_register_messages
 
 
 
@@ -2603,18 +2603,8 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         d.setMinimumSize(980, 300)
         vbox = QVBoxLayout(d)
 
-        msg = "%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n" % (_("Your addresses and public keys will be exported to an encrypted KYC file, readable only by DGLD and this wallet."),
-                                          _("Your private keys will not be exported."),
-                              _(""),
-                              _("You agree to the terms and conditions, the SHA256 hash of which will be embedded in the exported addresses"),
-                              _(""),
-                              _("The file should be uploaded as part of the registration process at https://dgld.ch/wallet-id."),
-                              _(""),
-                              _("Click \'Export\' to save the file.")
-        )
-
+        msg = "\n".join(_(_m) for _m in kyc_register_messages)
         vbox.addWidget(QLabel(msg))
-
 
         defaultfilename = 'REGISTRATION.dat'
 

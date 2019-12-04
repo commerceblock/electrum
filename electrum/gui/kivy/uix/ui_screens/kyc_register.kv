@@ -1,0 +1,59 @@
+#:import _ electrum.gui.kivy.i18n._
+#:import Decimal decimal.Decimal
+#:import kyc_register_messages electrum.messages.kyc_register_messages
+#:set btc_symbol chr(171)
+#:set mbtc_symbol chr(187)
+#:set font_light 'electrum/gui/kivy/data/fonts/Roboto-Condensed.ttf'
+
+
+KycRegisterDialog:
+    id: kyc_register
+    name: 'register'
+    title: _("Register wallet")
+    BoxLayout:
+        orientation: 'vertical'
+        Label:
+            text: _(kyc_register_messages[0])
+            text_size: self.size
+            size_hint: 1, 0.3
+        Label:
+            text: _(kyc_register_messages[1])
+            text_size: self.size
+            size_hint: 1, 0.1
+        Label:
+            text: _(kyc_register_messages[2])
+            size_hint: 1, 0.1
+        Label:
+            text: _(kyc_register_messages[3])
+            text_size: self.size
+            size_hint: 1, 0.3
+        Label:
+            text: _(kyc_register_messages[4])
+            size_hint: 1, 0.1
+        Label:
+            text: _(kyc_register_messages[5])
+            text_size: self.size
+            size_hint: 1, 0.3
+        Label:
+            text: _(kyc_register_messages[6])
+            size_hint: 1, 0.1
+        Label:
+            text: _(kyc_register_messages[7])
+            text_size: self.size
+            size_hint: 1, 0.1
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint: 1, 0.2
+            TextInput:
+                id: kyc_file
+                disabled: False
+                size_hint: 0.6, 1
+            Button:
+                text: _("Export")
+                size_hint: 0.2, 1
+            Button:
+                text: _("Share")
+                size_hint: 0.2, 1
+        TextInput:
+            id: kyc_key
+            disabled: True

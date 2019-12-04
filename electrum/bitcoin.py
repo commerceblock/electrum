@@ -522,9 +522,12 @@ def is_b58_address(addr):
     try:
         addrtype, h = b58_address_to_hash160(addr)
     except Exception as e:
+        print_error("Could not decode address:", str(e))
         return False
     if addrtype not in [constants.net.ADDRTYPE_P2PKH, constants.net.ADDRTYPE_P2SH]:
+        print_error("addrtype", addrtype, "not in allowed value set", constants.net.ADDRTYPE_P2PKH, constants.net.ADDRTYPE_P2SH)
         return False
+    print_error(addr, "==", hash160_to_b58_address(h, addrtype))
     return addr == hash160_to_b58_address(h, addrtype)
 
 def is_address(addr):

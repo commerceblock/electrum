@@ -692,7 +692,7 @@ class AddressSynchronizer(PrintError):
     def get_tx_delta(self, tx_hash, address):
         "effect of tx on address"
         delta = 0
-        # substract the value of coins sent from address
+        # subtract the value of coins sent from address
         d = self.txi.get(tx_hash, {}).get(address, [])
         for n, v, a in d:
             delta -= v

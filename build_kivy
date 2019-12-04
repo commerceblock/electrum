@@ -1,0 +1,3 @@
+
+
+docker run -it --rm --name electrum-android-builder-cont -v $PWD:/home/user/wspace/electrum -v $HOME/.android:/home/user/.keystore --workdir /home/user/wspace/electrum electrum-android-builder-img ./contrib/make_apk

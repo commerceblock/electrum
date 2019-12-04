@@ -6,12 +6,13 @@ import datetime
 import traceback
 from decimal import Decimal
 import threading
+from collections import deque
 
 from electrum.bitcoin import TYPE_ADDRESS
 from electrum.storage import WalletStorage
 from electrum.wallet import Wallet
 from electrum.paymentrequest import InvoiceStore
-from electrum.util import profiler, InvalidPassword
+from electrum.util import profiler, InvalidPassword, WalletFileException, BitcoinException, print_error
 from electrum.plugin import run_hook
 from electrum.util import format_satoshis, format_satoshis_plain
 from electrum.paymentrequest import PR_UNPAID, PR_PAID, PR_UNKNOWN, PR_EXPIRED
@@ -288,6 +289,10 @@ class ElectrumWindow(App):
         self._password_dialog = None
         self.fee_status = self.electrum_config.get_fee_status()
 
+        self.policy_tx_queue = deque()
+        self.policy_tx_lock = threading.Lock()
+        self._trigger_process_policy_transactions = Clock.create_trigger(self.process_policy_transactions, .45)
+
     def wallet_name(self):
         return os.path.basename(self.wallet.storage.path) if self.wallet else ' '
 
@@ -522,7 +527,12 @@ class ElectrumWindow(App):
             return
         if self.wallet and self.wallet.storage.path == path:
             return
-        wallet = self.daemon.load_wallet(path, None)
+        try:
+            wallet = self.daemon.load_wallet(path, None)
+        except (WalletFileException, BitcoinException) as e:
+            print_error("error loading wallet:", str(e))
+            wallet = None
+            os.unlink(path) # TODO: hack, deleting a wallet is not safe
         if wallet:
             if wallet.has_password():
                 self.password_dialog(wallet, _('Enter PIN code'), lambda x: self.load_wallet(wallet), self.stop)
@@ -599,9 +609,22 @@ class ElectrumWindow(App):
         self._settings_dialog.update()
         self._settings_dialog.open()
 
+    def kyc_register_dialog(self, name, password):
+        print_error("kyc_register_dialog")
+        popup = Builder.load_file('electrum/gui/kivy/uix/ui_screens/'+name+'.kv')
+        if not popup:
+            print_error("Could not load UI file:", name + '.kv')
+
+        kycSuccess, kycfileString = self.wallet.get_kyc_string(password)
+
+        popup.init(kycfileString)
+        popup.open()
+
     def popup_dialog(self, name):
         if name == 'settings':
             self.settings_dialog()
+        elif name == 'kyc_register':
+            self.protected(_("Enter your PIN code to register wallet"), self.kyc_register_dialog, (name,))
         elif name == 'wallets':
             from .uix.dialogs.wallets import WalletDialog
             d = WalletDialog()
@@ -618,6 +641,8 @@ class ElectrumWindow(App):
             popup.open()
         else:
             popup = Builder.load_file('electrum/gui/kivy/uix/ui_screens/'+name+'.kv')
+            if not popup:
+                print_error("Could not load UI file:", name + '.kv')
             popup.open()
 
     @profiler
@@ -674,9 +699,24 @@ class ElectrumWindow(App):
         elif event == 'status':
             self._trigger_update_status()
         elif event == 'new_transaction':
+            with self.policy_tx_lock:
+                self.policy_tx_queue.append(args[0])
+            self._trigger_process_policy_transactions()
             self._trigger_update_wallet()
         elif event == 'verified':
             self._trigger_update_wallet()
+
+    def process_policy_transactions(self, dt):
+        Logger.info('policy transaction')
+        def queue_nonempty():
+            with self.policy_tx_lock:
+                return bool(self.policy_tx_queue)
+        
+        while queue_nonempty():
+            with self.policy_tx_lock:
+                tx = self.policy_tx_queue.popleft()
+            if not tx: continue
+            self.wallet.parse_policy_tx(tx, self)
 
     @profiler
     def load_wallet(self, wallet):
@@ -822,13 +862,16 @@ class ElectrumWindow(App):
         '''
         info_bubble = self.info_bubble
         if not info_bubble:
+            print_error("no info bubble, creating one")
             info_bubble = self.info_bubble = Factory.InfoBubble()
 
         win = Window
         if info_bubble.parent:
+            print_error("info bubble has a parent, removing")
             win.remove_widget(info_bubble
                                  if not info_bubble.modal else
                                  info_bubble._modal_view)
+            info_bubble.parent = None
 
         if not arrow_pos:
             info_bubble.show_arrow = False
@@ -857,6 +900,8 @@ class ElectrumWindow(App):
         info_bubble.message = text
         if not pos:
             pos = (win.center[0], win.center[1] - (info_bubble.height/2))
+        print_error("showing info bubble, duration:", duration)
+        print_error(" text:", text)
         info_bubble.show(pos, duration, width, modal=modal, exit=exit)
 
     def tx_dialog(self, tx):
