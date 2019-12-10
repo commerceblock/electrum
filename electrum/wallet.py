@@ -1271,10 +1271,14 @@ class Abstract_Wallet(AddressSynchronizer):
         return False
 
     def parse_policy_tx(self, tx: transaction.Transaction, parent_window):
+        self.print_error("parse_policy tx")
         if self.parse_registeraddress_tx(tx, parent_window):
+            self.print_error("policy tx: registeraddress")
             return True
         if self.parse_whitelist_tx(tx):
+            self.print_error("policy tx: whitelist")
             return True
+        self.print_error("policy tx: none")
         return False
 
     #Get the address the transaction fee was paid from

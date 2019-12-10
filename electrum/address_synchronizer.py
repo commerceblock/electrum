@@ -602,6 +602,9 @@ class AddressSynchronizer(PrintError):
         self.network.trigger_callback('verified', tx_hash, tx_mined_status)
 
     def add_unassigned_kyc_pubkey(self, key: str, outpoint: TxOutPoint):
+        import traceback
+        self.print_error("Adding KYC pubkey:", key)
+        traceback.print_stack()
         # Remove from the unverified map and add to the verified map
         with self.lock:
             self.unassigned_kyc_pubkeys.pop(key, None)

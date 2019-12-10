@@ -14,7 +14,7 @@ from electrum.wallet import Wallet
 from electrum.paymentrequest import InvoiceStore
 from electrum.util import profiler, InvalidPassword, WalletFileException, BitcoinException, print_error
 from electrum.plugin import run_hook
-from electrum.util import format_satoshis, format_satoshis_plain
+from electrum.util import format_satoshis, format_satoshis_plain, TimeoutException
 from electrum.paymentrequest import PR_UNPAID, PR_PAID, PR_UNKNOWN, PR_EXPIRED
 from electrum.util import android_acquire_camera_permissions
 from .i18n import _
@@ -291,7 +291,7 @@ class ElectrumWindow(App):
 
         self.policy_tx_queue = deque()
         self.policy_tx_lock = threading.Lock()
-        self._trigger_process_policy_transactions = Clock.create_trigger(self.process_policy_transactions, .45)
+        self._trigger_process_transactions = Clock.create_trigger(self.process_transactions, .5)
 
     def wallet_name(self):
         return os.path.basename(self.wallet.storage.path) if self.wallet else ' '
@@ -701,22 +701,30 @@ class ElectrumWindow(App):
         elif event == 'new_transaction':
             with self.policy_tx_lock:
                 self.policy_tx_queue.append(args[0])
-            self._trigger_process_policy_transactions()
-            self._trigger_update_wallet()
+                print_error('transaction queue (add):', len(self.policy_tx_queue))
+            self._trigger_process_transactions()
         elif event == 'verified':
             self._trigger_update_wallet()
 
-    def process_policy_transactions(self, dt):
-        Logger.info('policy transaction')
-        def queue_nonempty():
-            with self.policy_tx_lock:
-                return bool(self.policy_tx_queue)
-        
-        while queue_nonempty():
-            with self.policy_tx_lock:
+    def process_transactions(self, dt=0):
+        Logger.info('transaction received')
+        with self.policy_tx_lock:
+            while self.policy_tx_queue:
+                print_error('transaction queue (len):', len(self.policy_tx_queue))
                 tx = self.policy_tx_queue.popleft()
-            if not tx: continue
-            self.wallet.parse_policy_tx(tx, self)
+                if not tx: continue
+                try:
+                    print_error('interpreting policy transaction')
+                    if self.wallet.parse_policy_tx(tx, self):
+                        print_error('policy transaction received')
+                    else:
+                        print_error('ordinary transaction received')
+                except TimeoutException:
+                    print_error("Server timeout while processing policy transaction.")
+                    with self.policy_tx_lock:
+                        self.policy_tx_queue.insert(0, tx)
+            
+            self.update_wallet()
 
     @profiler
     def load_wallet(self, wallet):
