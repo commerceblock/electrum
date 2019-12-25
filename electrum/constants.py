@@ -38,7 +38,13 @@ def read_json(filename, default):
         r = default
     return r
 
-class OceanMainnet:
+class AbstractNet:
+
+    @classmethod
+    def max_checkpoint(cls) -> int:
+        return max(0, len(cls.BTC_CHECKPOINTS) * 2016 - 1)
+
+class OceanMainnet(AbstractNet):
 
     TESTNET = False
     FIXEDFEE = 50000
@@ -57,6 +63,14 @@ class OceanMainnet:
     DEFAULT_SERVERS = read_json('servers.json', {})
     MAPPING_URL = 'https://s3.eu-west-1.amazonaws.com/gtsa-mapping/map.json'
     CHECKPOINTS = []    # no handling for checkpoins
+
+    MAINSTAY_URL = 'https://mainstay.xyz'
+    MAINSTAY_SCRIPT = "522103639a65bfb3dd5a579e65231a4e70327aba358e956d6e10f7ea2e25dd631e4d6621024f714a1b93697c5a3865259ac3a865bb306e8b720c3bec46bae3298ef3fa796421035ea174407b61b85fc83993084c471f78095779737a75adf2a2e52cdd2a36edd353ae"
+    MAINSTAY_CHAINCODES = ["8c57ec95db9ddab3b17ea5ae8c1411bbc0859d1a5262ff67d475cc880e14cfd9","087c28f8989d4a5e692127dbaeffc86b7d2d44b878b3a585b2c98967c854ed8d","2f94eeb596c3c7d9a5746b17150412a3c5f4f9f999ffb2395fc59a14bcfc4271"]
+    MAINSTAY_SLOT = 1
+    BTC_GENESIS = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"
+    BTC_DEFAULT_SERVERS = read_json('btc_servers.json', {})
+    BTC_CHECKPOINTS = read_json('btc_checkpoints.json', [])
 
     XPRV_HEADERS = {
         'standard':    0x0488ade4,  # xprv

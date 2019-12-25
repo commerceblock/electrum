@@ -44,22 +44,26 @@ TX_ICONS = [
     "unconfirmed.png",
     "offline_tx.png",
     "confirmed.png",
-    "confirmed.png",
-    "confirmed.png",
-    "confirmed.png",
-    "confirmed.png",
-    "confirmed.png",
+    "clock0.png",
+    "clock1.png",
+    "clock2.png",
+    "clock3.png",
+    "clock4.png",
+    "clock5.png",
+    "clock6.png"
 ]
 
 class HistoryList(MyTreeWidget, AcceptFileDragDrop):
     filter_columns = [2, 3, 4]  # Date, Description, Amount
 
     def __init__(self, parent=None):
-        MyTreeWidget.__init__(self, parent, self.create_menu, [], 3)
+        MyTreeWidget.__init__(self, parent, self.create_menu, [], 4)
         AcceptFileDragDrop.__init__(self, ".txn")
         self.refresh_headers()
-        self.setColumnHidden(1, True)
+        self.setColumnHidden(2, True)
+        if not self.config.get('mainstay_on', False): self.setColumnHidden(1, True)
         self.setSortingEnabled(True)
+        self.setIconSize(QSize(20,20))
         self.sortByColumn(0, Qt.AscendingOrder)
         self.start_timestamp = None
         self.end_timestamp = None
@@ -71,7 +75,7 @@ class HistoryList(MyTreeWidget, AcceptFileDragDrop):
         return str(datetime.date(d.year, d.month, d.day)) if d else _('None')
 
     def refresh_headers(self):
-        headers = ['', '', _('Date'), _('Description'), _('Amount'), _('Balance'), _('Mass')]
+        headers = ['', '', '', _('Date'), _('Description'), _('Amount'), _('Balance'), _('Mass')]
         fx = self.parent.fx
         if fx and fx.show_history():
             headers.extend(['%s '%fx.ccy + _('Value')])
@@ -230,7 +234,7 @@ class HistoryList(MyTreeWidget, AcceptFileDragDrop):
         if fx: fx.history_used_spot = False
         blue_brush = QBrush(QColor("#1E1EFF"))
         red_brush = QBrush(QColor("#BC1E1E"))
-        monospace_font = QFont(MONOSPACE_FONT)
+        monospace_font = QFont(MONOSPACE_FONT,13)
         for tx_item in self.transactions:
             tx_hash = tx_item['txid']
             height = tx_item['height']
@@ -248,7 +252,19 @@ class HistoryList(MyTreeWidget, AcceptFileDragDrop):
             tokrat = token_ratio(self.wallet.get_block_height())
             rmass = str("%.6f" % round((float(balance)*tokrat/1.0E+8),8))
             rmass_str = rmass+" oz "
-            entry = ['', tx_hash, status_str, label, v_str, balance_str, rmass_str]
+            if self.config.get('mainstay_on', False):
+                try:
+                    if self.parent.mainstay.synced and height <= self.parent.mainstay.height:
+                        btc_height = self.parent.gui_object.daemon.network_btc.get_local_height()
+                        btc_conf = btc_height - self.parent.mainstay.get_confirmation_height(height) + 1
+                    else:
+                        btc_conf = 0
+                except:
+                    btc_conf = 0
+            else:
+                btc_conf = 0
+            icon_mainstay = self.icon_cache.get(":icons/" + TX_ICONS[min(btc_conf+5,11)])
+            entry = ['', '', tx_hash, status_str, label, v_str, balance_str, rmass_str]
             fiat_value = None
             if value is not None and fx and fx.show_history():
                 fiat_value = tx_item['fiat_value'].value
@@ -260,20 +276,23 @@ class HistoryList(MyTreeWidget, AcceptFileDragDrop):
                     entry.append(fx.format_fiat(tx_item['capital_gain'].value))
             item = SortableTreeWidgetItem(entry)
             item.setIcon(0, icon)
-            item.setToolTip(0, str(conf) + " confirmation" + ("s" if conf != 1 else ""))
+            if self.config.get('mainstay_on', False):
+                item.setIcon(1, icon_mainstay)
+                item.setToolTip(1, str(btc_conf) + " BTC confirmation" + ("s" if btc_conf != 1 else ""))
+            item.setToolTip(0, str(conf) + " sidechain confirmation" + ("s" if conf != 1 else ""))
             item.setData(0, SortableTreeWidgetItem.DataRole, (status, conf))
             if has_invoice:
-                item.setIcon(3, self.icon_cache.get(":icons/seal"))
+                item.setIcon(4, self.icon_cache.get(":icons/seal"))
             for i in range(len(entry)):
                 if i>3:
                     item.setTextAlignment(i, Qt.AlignRight | Qt.AlignVCenter)
                 if i!=2:
                     item.setFont(i, monospace_font)
             if value and value < 0:
-                item.setForeground(3, red_brush)
                 item.setForeground(4, red_brush)
+                item.setForeground(5, red_brush)
             if fiat_value and not tx_item['fiat_default']:
-                item.setForeground(6, blue_brush)
+                item.setForeground(7, blue_brush)
             if tx_hash:
                 item.setData(0, Qt.UserRole, tx_hash)
             self.insertTopLevelItem(0, item)
@@ -285,11 +304,11 @@ class HistoryList(MyTreeWidget, AcceptFileDragDrop):
         key = item.data(0, Qt.UserRole)
         text = item.text(column)
         # fixme
-        if column == 3:
+        if column == 4:
             self.parent.wallet.set_label(key, text)
             self.update_labels()
             self.parent.update_completions()
-        elif column == 6:
+        elif column == 7:
             self.parent.wallet.set_fiat_value(key, self.parent.fx.ccy, text)
             self.on_update()
 
@@ -308,7 +327,7 @@ class HistoryList(MyTreeWidget, AcceptFileDragDrop):
             item = root.child(i)
             txid = item.data(0, Qt.UserRole)
             label = self.wallet.get_label(txid)
-            item.setText(3, label)
+            item.setText(4, label)
 
     def update_item(self, tx_hash, tx_mined_status):
         if self.wallet is None:
@@ -321,7 +340,7 @@ class HistoryList(MyTreeWidget, AcceptFileDragDrop):
             item = items[0]
             item.setIcon(0, icon)
             item.setData(0, SortableTreeWidgetItem.DataRole, (status, conf))
-            item.setText(2, status_str)
+            item.setText(3, status_str)
 
     def create_menu(self, position):
         self.selectedIndexes()

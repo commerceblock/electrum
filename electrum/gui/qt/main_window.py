@@ -114,6 +114,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         self.setup_exception_hook()
 
         self.network = gui_object.daemon.network
+        self.mainstay = gui_object.daemon.mainstay
         self.fx = gui_object.daemon.fx
         self.invoices = wallet.invoices
         self.contacts = wallet.contacts
@@ -552,6 +553,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         # Settings / Preferences are all reserved keywords in macOS using this as work around
         tools_menu.addAction(_("&Preferences") if sys.platform == 'darwin' else _("Preferences"), self.settings_dialog)
         tools_menu.addAction(_("&Network"), lambda: self.gui_object.show_network_dialog(self))
+        tools_menu.addAction(_("&Mainstay"), lambda: self.gui_object.show_mainstay_dialog(self))
         tools_menu.addSeparator()
         tools_menu.addAction(_("&Sign/verify message"), self.sign_verify_message)
         tools_menu.addAction(_("&Encrypt/decrypt message"), self.encrypt_message)
@@ -750,9 +752,11 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
             if not self.wallet.up_to_date or server_height == 0:
                 text = _("  Synchronizing...")
                 icon = QIcon(":icons/status_waiting.png")
+                sb_tool_tip = _("Network synchronizing")
             elif server_lag > 1:
                 text = _("  Server is lagging ({} blocks)").format(server_lag)
                 icon = QIcon(":icons/status_lagging.png")
+                sb_tool_tip = _(constants.net.WALLETTITLE+"chain synchronizing")
             else:
                 c, u, x = self.wallet.get_balance()
                 text =  _("  Balance" ) + ": %s "%(self.format_amount_and_units(c))
@@ -773,16 +777,32 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
                     icon = QIcon(":icons/status_connected.png")
                 else:
                     icon = QIcon(":icons/status_connected_proxy.png")
+                sb_tool_tip = _("Connected to "+constants.net.WALLETTITLE)
         else:
             if self.network.proxy:
                 text = "{} ({})".format(_("Not connected"), _("proxy enabled"))
             else:
                 text = _("  Not connected")
             icon = QIcon(":icons/status_disconnected.png")
+            sb_tool_tip = _("Not connected")
 
         self.tray.setToolTip("%s (%s)" % (text, self.wallet.basename()))
         self.balance_label.setText(text)
         self.status_button.setIcon( icon )
+        self.status_button.setToolTip(sb_tool_tip)
+
+        if self.mainstay:
+            if self.mainstay.synced:
+                ms_icon = QIcon(":icons/mainstay-on.png")
+                ms_tool_tip = _("Mainstay synchronized")
+            else:
+                ms_icon = QIcon(":icons/mainstay-off.png")
+                ms_tool_tip = _("Mainstay synchronizing ...")
+        else:
+            ms_icon = QIcon(":icons/mainstay-off.png")
+            ms_tool_tip = _("Mainstay off")
+        self.mainstay_button.setIcon(ms_icon)
+        self.mainstay_button.setToolTip(ms_tool_tip)
 
 
     def update_wallet(self):
@@ -2091,7 +2111,9 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         sb.addPermanentWidget(StatusBarButton(QIcon(":icons/preferences.png"), _("Preferences"), self.settings_dialog ) )
         self.seed_button = StatusBarButton(QIcon(":icons/seed.png"), _("Seed"), self.show_seed_dialog )
         sb.addPermanentWidget(self.seed_button)
-        self.status_button = StatusBarButton(QIcon(":icons/status_disconnected.png"), _("Network"), lambda: self.gui_object.show_network_dialog(self))
+        self.mainstay_button = StatusBarButton(QIcon(":icons/mainstay-off.png"), _("Mainstay not connected"), lambda: self.gui_object.show_mainstay_dialog(self)) 
+        sb.addPermanentWidget(self.mainstay_button)
+        self.status_button = StatusBarButton(QIcon(":icons/status_disconnected.png"), _("Network not connected"), lambda: self.gui_object.show_network_dialog(self))
         sb.addPermanentWidget(self.status_button)
         run_hook('create_status_bar', sb)
         self.setStatusBar(sb)
@@ -3511,10 +3533,10 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
             ]
         else:
             tabs_info = [
-                (fee_widgets, _('Fees')),
-                (tx_widgets, _('Transactions')),
-                (gui_widgets, _('Appearance')),
-                (id_widgets, _('Identity')),
+                (fee_widgets, _(' Fees ')),
+                (tx_widgets, _(' Transactions ')),
+                (gui_widgets, _(' Appearance ')),
+                (id_widgets, _(' Identity ')),
             ]
 
         for widgets, name in tabs_info:
@@ -3546,7 +3568,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
 
         run_hook('close_settings_dialog')
         if self.need_restart:
-            self.show_warning(_('Please restart Electrum to activate the new GUI settings'), title=_('Success'))
+            self.show_warning(_('Please restart Ocean wallet to activate the new GUI settings'), title=_('Success'))
 
 
     def closeEvent(self, event):
