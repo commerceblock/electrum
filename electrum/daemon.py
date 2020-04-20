@@ -51,6 +51,10 @@ def get_lockfile(config):
 def remove_lockfile(lockfile):
     os.unlink(lockfile)
 
+def print_stack_to_file(message=None, filename="electrum_wallet_daemon_stack.txt"):
+    f=open(filename, 'w')
+    traceback.print_stack(file=f)
+    f.close()
 
 def get_fd_or_server(config):
     '''Tries to create the lockfile, using O_EXCL to
@@ -58,17 +62,26 @@ def get_fd_or_server(config):
     Otherwise try and connect to the server specified in the lockfile.
     If this succeeds, the server is returned.  Otherwise remove the
     lockfile and try again.'''
+    print_stack_to_file()
     lockfile = get_lockfile(config)
+    print_stack_to_file()
     while True:
         try:
+            print_stack_to_file()
             return os.open(lockfile, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o644), None
         except OSError:
+            print_stack_to_file()
             pass
+        print_stack_to_file()
         server = get_server(config)
+        print_stack_to_file()
         if server is not None:
+            print_stack_to_file()
             return None, server
         # Couldn't connect; remove lockfile and try again.
+        print_stack_to_file()
         remove_lockfile(lockfile)
+        print_stack_to_file()
 
 
 def get_server(config):
