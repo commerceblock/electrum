@@ -336,12 +336,10 @@ def init_plugins(config, gui_name):
     from electrum.plugin import Plugins
     return Plugins(config, is_local or is_android, gui_name)
 
-def print_stack_to_file(number=0, base="electrum_wallet_stack"):
-    fname = base + "_{}.txt".format(number)
-    f=open(fname, 'w')
+def print_stack_to_file(message=None, filename="electrum_wallet_stack.txt"):
+    f=open(filename, 'w')
     traceback.print_stack(file=f)
     f.close()
-    
 
 if __name__ == '__main__':
     print_stack_to_file(1)
@@ -426,6 +424,7 @@ if __name__ == '__main__':
 
     print_stack_to_file(4)
     if cmdname == 'gui':
+        print_stack_to_file(14)
         fd, server = daemon.get_fd_or_server(config)
         if fd is not None:
             plugins = init_plugins(config, config.get('gui', 'qt'))
