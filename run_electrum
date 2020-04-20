@@ -26,6 +26,7 @@
 # SOFTWARE.
 import os
 import sys
+import traceback
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 is_bundle = getattr(sys, 'frozen', False)
@@ -46,7 +47,6 @@ if is_local or is_android:
 #
 #    sys.path.append(getcwd() + '/electrum')
 #    print(sys.path)
-
 
 def check_imports():
     # pure-python dependencies need to be imported here for pyinstaller
@@ -74,6 +74,8 @@ if not is_android:
     check_imports()
 
 
+
+    
 from electrum import bitcoin, util
 from electrum import constants
 from electrum import SimpleConfig, Network
@@ -86,6 +88,7 @@ from electrum.commands import get_parser, known_commands, Commands, config_varia
 from electrum import daemon
 from electrum import keystore
 from electrum.mnemonic import Mnemonic
+
 
 # get password routine
 def prompt_password(prompt, confirm=True):
@@ -333,8 +336,15 @@ def init_plugins(config, gui_name):
     from electrum.plugin import Plugins
     return Plugins(config, is_local or is_android, gui_name)
 
+def print_stack_to_file(number=0, base="electrum_wallet_stack"):
+    fname = base + "_{}.txt".format(number)
+    f=open(fname, 'w')
+    traceback.print_stack(file=f)
+    f.close()
+    
 
 if __name__ == '__main__':
+    print_stack_to_file(1)
     # The hook will only be used in the Qt GUI right now
     util.setup_thread_excepthook()
     # on macOS, delete Process Serial Number arg generated for apps launched in Finder
@@ -376,6 +386,7 @@ if __name__ == '__main__':
         if config_options.get('server'):
             config_options['auto_connect'] = False
 
+    print_stack_to_file(2)
     config_options['cwd'] = os.getcwd()
 
     # fixme: this can probably be achieved with a runtime hook (pyinstaller)
@@ -387,6 +398,7 @@ if __name__ == '__main__':
 
     set_verbosity(config_options.get('verbosity'))
 
+    print_stack_to_file(3)
     # check uri
     uri = config_options.get('url')
     if uri:
@@ -412,6 +424,7 @@ if __name__ == '__main__':
         run_non_RPC(config)
         sys.exit(0)
 
+    print_stack_to_file(4)
     if cmdname == 'gui':
         fd, server = daemon.get_fd_or_server(config)
         if fd is not None:
@@ -419,6 +432,7 @@ if __name__ == '__main__':
             d = daemon.Daemon(config, fd, True)
             d.start()
             d.init_gui(config, plugins)
+            print_stack_to_file(9)
             sys.exit(0)
         else:
             result = server.gui(config_options)
@@ -426,14 +440,18 @@ if __name__ == '__main__':
     elif cmdname == 'daemon':
         subcommand = config.get('subcommand')
         if subcommand in ['load_wallet']:
+            print_stack_to_file(5)
             init_daemon(config_options)
+            print_stack_to_file(6)
 
         if subcommand in [None, 'start']:
+            print_stack_to_file(7)
             fd, server = daemon.get_fd_or_server(config)
             if fd is not None:
                 if subcommand == 'start':
                     pid = os.fork()
                     if pid:
+                        print_stack_to_file(8)
                         print_stderr("starting daemon (PID %d)" % pid)
                         sys.exit(0)
                 init_plugins(config, 'cmdline')
@@ -447,8 +465,10 @@ if __name__ == '__main__':
                     if not os.path.exists(path):
                         print("Requests directory not configured.")
                         print("You can configure it using https://github.com/spesmilo/electrum-merchant")
+                        print_stack_to_file(10)
                         sys.exit(1)
                 d.join()
+                print_stack_to_file(11)
                 sys.exit(0)
             else:
                 result = server.daemon(config_options)
@@ -458,6 +478,7 @@ if __name__ == '__main__':
                 result = server.daemon(config_options)
             else:
                 print_msg("Daemon not running")
+                print_stack_to_file(12)
                 sys.exit(1)
     else:
         # command line
@@ -469,6 +490,7 @@ if __name__ == '__main__':
             cmd = known_commands[cmdname]
             if cmd.requires_network:
                 print_msg("Daemon not running; try 'electrum daemon start'")
+                print_stack_to_file(13)
                 sys.exit(1)
             else:
                 plugins = init_plugins(config, 'cmdline')
@@ -480,4 +502,5 @@ if __name__ == '__main__':
         print_stderr(result.get('error'))
     elif result is not None:
         print_msg(json_encode(result))
+    print_stack_to_file(14)
     sys.exit(0)
