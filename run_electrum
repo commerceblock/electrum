@@ -426,14 +426,20 @@ if __name__ == '__main__':
     if cmdname == 'gui':
         print_stack_to_file(14)
         fd, server = daemon.get_fd_or_server(config)
+        print_stack_to_file(15)
         if fd is not None:
+            print_stack_to_file(16)
             plugins = init_plugins(config, config.get('gui', 'qt'))
+            print_stack_to_file(17)
             d = daemon.Daemon(config, fd, True)
+            print_stack_to_file(18)
             d.start()
+            print_stack_to_file(19)
             d.init_gui(config, plugins)
             print_stack_to_file(9)
             sys.exit(0)
         else:
+            print_stack_to_file(20)
             result = server.gui(config_options)
 
     elif cmdname == 'daemon':
