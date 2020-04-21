@@ -26,6 +26,23 @@
 # SOFTWARE.
 import os
 import sys
+import faulthandler
+
+faulthandler.enable(file=open("electrum_fault_handler_traceback.txt", "w"), all_threads=True)
+
+def print_exception(exception=""):
+    f = open('electrum_exception.txt', 'w')
+    f.write('An exception occured - %s' % exception)
+    f.close() 
+
+def print_all_exceptions(func):
+    def wrapper_print_all_exceptions(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except Exception as e:
+            print_exception(e)
+            raise
+    return wrapper_print_all_exceptions
 
 script_dir = os.path.dirname(os.path.realpath(__file__))
 is_bundle = getattr(sys, 'frozen', False)
