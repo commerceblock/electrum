@@ -1,6 +1,8 @@
 #!/bin/bash
 # Run this after a new release to update dependencies
 
+set -e
+
 venv_dir=~/.electrum-venv
 contrib=$(dirname "$0")
 
@@ -8,7 +10,7 @@ which virtualenv > /dev/null 2>&1 || { echo "Please install virtualenv" && exit 
 python3 -m hashin -h > /dev/null 2>&1 || { python3 -m pip install hashin; }
 other_python=$(which python3)
 
-for i in '' '-hw' '-binaries'; do
+for i in '' '-hw' '-binaries' '-wine-build'; do
     rm -rf "$venv_dir"
     virtualenv -p $(which python3) $venv_dir
 

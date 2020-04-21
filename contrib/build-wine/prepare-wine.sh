@@ -1,150 +1,137 @@
 #!/bin/bash
 
 # Please update these carefully, some versions won't work under Wine
-NSIS_FILENAME=nsis-3.03-setup.exe
+NSIS_FILENAME=nsis-3.05-setup.exe
 NSIS_URL=https://prdownloads.sourceforge.net/nsis/$NSIS_FILENAME?download
-NSIS_SHA256=bd3b15ab62ec6b0c7a00f46022d441af03277be893326f6fea8e212dc2d77743
+NSIS_SHA256=1a3cc9401667547b9b9327a177b13485f7c59c2303d4b6183e7bc9e6c8d6bfdb
 
 ZBAR_FILENAME=zbarw-20121031-setup.exe
 ZBAR_URL=https://sourceforge.net/projects/zbarw/files/$ZBAR_FILENAME/download
 ZBAR_SHA256=177e32b272fa76528a3af486b74e9cb356707be1c5ace4ed3fcee9723e2c2c02
 
-LIBUSB_FILENAME=libusb-1.0.22.7z
-LIBUSB_URL=https://prdownloads.sourceforge.net/project/libusb/libusb-1.0/libusb-1.0.22/$LIBUSB_FILENAME?download
-LIBUSB_SHA256=671f1a420757b4480e7fadc8313d6fb3cbb75ca00934c417c1efa6e77fb8779b
+LIBUSB_REPO="https://github.com/libusb/libusb.git"
+LIBUSB_COMMIT=e782eeb2514266f6738e242cdcb18e3ae1ed06fa
+# ^ tag v1.0.23
 
-PYTHON_VERSION=3.6.6
+PYINSTALLER_REPO="https://github.com/SomberNight/pyinstaller.git"
+PYINSTALLER_COMMIT=e934539374e30d1500fcdbe8e4eb0860413935b2
+# ^ tag 3.6, plus a custom commit that fixes cross-compilation with MinGW
+
+PYTHON_VERSION=3.7.6
 
 ## These settings probably don't need change
 export WINEPREFIX=/opt/wine64
-#export WINEARCH='win32'
+export WINEDEBUG=-all
 
-PYHOME=c:/python$PYTHON_VERSION
+PYTHON_FOLDER="python3"
+PYHOME="c:/$PYTHON_FOLDER"
 PYTHON="wine $PYHOME/python.exe -OO -B"
 
 
-# based on https://superuser.com/questions/497940/script-to-verify-a-signature-with-gpg
-verify_signature() {
-    local file=$1 keyring=$2 out=
-    if out=$(gpg --no-default-keyring --keyring "$keyring" --status-fd 1 --verify "$file" 2>/dev/null) &&
-       echo "$out" | grep -qs "^\[GNUPG:\] VALIDSIG "; then
-        return 0
-    else
-        echo "$out" >&2
-        exit 1
-    fi
-}
-
-verify_hash() {
-    local file=$1 expected_hash=$2
-    actual_hash=$(sha256sum $file | awk '{print $1}')
-    if [ "$actual_hash" == "$expected_hash" ]; then
-        return 0
-    else
-        echo "$file $actual_hash (unexpected hash)" >&2
-        rm "$file"
-        exit 1
-    fi
-}
-
-download_if_not_exist() {
-    local file_name=$1 url=$2
-    if [ ! -e $file_name ] ; then
-        wget -O $PWD/$file_name "$url"
-    fi
-}
-
-# https://github.com/travis-ci/travis-build/blob/master/lib/travis/build/templates/header.sh
-retry() {
-  local result=0
-  local count=1
-  while [ $count -le 3 ]; do
-    [ $result -ne 0 ] && {
-      echo -e "\nThe command \"$@\" failed. Retrying, $count of 3.\n" >&2
-    }
-    ! { "$@"; result=$?; }
-    [ $result -eq 0 ] && break
-    count=$(($count + 1))
-    sleep 1
-  done
-
-  [ $count -gt 3 ] && {
-    echo -e "\nThe command \"$@\" failed 3 times.\n" >&2
-  }
-
-  return $result
-}
-
 # Let's begin!
-here=$(dirname $(readlink -e $0))
 set -e
 
+here="$(dirname "$(readlink -e "$0")")"
+
+. "$CONTRIB"/build_tools_util.sh
+
+info "Booting wine."
 wine 'wineboot'
 
-# HACK to work around https://bugs.winehq.org/show_bug.cgi?id=42474#c22
-# needed for python 3.6+
-rm -f /opt/wine-stable/lib/wine/fakedlls/api-ms-win-core-path-l1-1-0.dll
-rm -f /opt/wine-stable/lib/wine/api-ms-win-core-path-l1-1-0.dll.so
 
-cd /tmp/electrum-build
+cd "$CACHEDIR"
+mkdir -p $WINEPREFIX/drive_c/tmp
 
-# Install Python
+info "Installing Python."
 # note: you might need "sudo apt-get install dirmngr" for the following
 # keys from https://www.python.org/downloads/#pubkeys
-KEYLIST_PYTHON_DEV="531F072D39700991925FED0C0EDDC5F26A45C816 26DEA9D4613391EF3E25C9FF0A5B101836580288 CBC547978A3964D14B9AB36A6AF053F07D9DC8D2 C01E1CAD5EA2C4F0B8E3571504C367C218ADD4FF 12EF3DC38047DA382D18A5B999CDEA9DA4135B38 8417157EDBE73D9EAC1E539B126EB563A74B06BF DBBF2EEBF925FAADCF1F3FFFD9866941EA5BBD71 2BA0DB82515BBB9EFFAC71C5C9BE28DEE6DF025C 0D96DF4D4110E5C43FBFB17F2D347EA6AA65421D C9B104B3DD3AA72D7CCB1066FB9921286F5E1540 97FC712E4C024BBEA48A61ED3A5CA953F73C700D 7ED10B6531D7C8E1BC296021FC624643487034E5"
 KEYRING_PYTHON_DEV="keyring-electrum-build-python-dev.gpg"
-for server in $(shuf -e ha.pool.sks-keyservers.net \
-                        hkp://p80.pool.sks-keyservers.net:80 \
-                        keyserver.ubuntu.com \
-                        hkp://keyserver.ubuntu.com:80) ; do
-    retry gpg --no-default-keyring --keyring $KEYRING_PYTHON_DEV --keyserver "$server" --recv-keys $KEYLIST_PYTHON_DEV \
-    && break || : ;
-done
+gpg --no-default-keyring --keyring $KEYRING_PYTHON_DEV --import "$here"/gpg_keys/7ED10B6531D7C8E1BC296021FC624643487034E5.asc
+PYTHON_DOWNLOADS="$CACHEDIR/python$PYTHON_VERSION"
+mkdir -p "$PYTHON_DOWNLOADS"
 for msifile in core dev exe lib pip tools; do
     echo "Installing $msifile..."
-    wget -N -c "https://www.python.org/ftp/python/$PYTHON_VERSION/win32/${msifile}.msi"
-    wget -N -c "https://www.python.org/ftp/python/$PYTHON_VERSION/win32/${msifile}.msi.asc"
-    verify_signature "${msifile}.msi.asc" $KEYRING_PYTHON_DEV
-    wine msiexec /i "${msifile}.msi" /qb TARGETDIR=C:/python$PYTHON_VERSION
+    download_if_not_exist "$PYTHON_DOWNLOADS/${msifile}.msi" "https://www.python.org/ftp/python/$PYTHON_VERSION/win32/${msifile}.msi"
+    download_if_not_exist "$PYTHON_DOWNLOADS/${msifile}.msi.asc" "https://www.python.org/ftp/python/$PYTHON_VERSION/win32/${msifile}.msi.asc"
+    verify_signature "$PYTHON_DOWNLOADS/${msifile}.msi.asc" $KEYRING_PYTHON_DEV
+    wine msiexec /i "$PYTHON_DOWNLOADS/${msifile}.msi" /qb TARGETDIR=$PYHOME
 done
 
-# upgrade pip
-$PYTHON -m pip install pip --upgrade
+info "Installing build dependencies."
+$PYTHON -m pip install --no-dependencies --no-warn-script-location -r "$CONTRIB"/deterministic-build/requirements-wine-build.txt
 
-# Install pywin32-ctypes (needed by pyinstaller)
-$PYTHON -m pip install pywin32-ctypes==0.1.2
+info "Installing dependencies specific to binaries."
+$PYTHON -m pip install --no-dependencies --no-warn-script-location -r "$CONTRIB"/deterministic-build/requirements-binaries.txt
 
-# install PySocks
-$PYTHON -m pip install win_inet_pton==1.0.1
+info "Installing ZBar."
+download_if_not_exist "$CACHEDIR/$ZBAR_FILENAME" "$ZBAR_URL"
+verify_hash "$CACHEDIR/$ZBAR_FILENAME" "$ZBAR_SHA256"
+wine "$CACHEDIR/$ZBAR_FILENAME" /S
 
-$PYTHON -m pip install -r $here/../deterministic-build/requirements-binaries.txt
+info "Installing NSIS."
+download_if_not_exist "$CACHEDIR/$NSIS_FILENAME" "$NSIS_URL"
+verify_hash "$CACHEDIR/$NSIS_FILENAME" "$NSIS_SHA256"
+wine "$CACHEDIR/$NSIS_FILENAME" /S
 
-# Install PyInstaller
-$PYTHON -m pip install pyinstaller==3.4
 
-# Install ZBar
-download_if_not_exist $ZBAR_FILENAME "$ZBAR_URL"
-verify_hash $ZBAR_FILENAME "$ZBAR_SHA256"
-wine "$PWD/$ZBAR_FILENAME" /S
+info "Compiling libusb..."
+(
+    cd "$CACHEDIR"
+    if [ -f "libusb/libusb/.libs/libusb-1.0.dll" ]; then
+        info "libusb-1.0.dll already built, skipping"
+        exit 0
+    fi
+    rm -rf libusb
+    mkdir libusb
+    cd libusb
+    # Shallow clone
+    git init
+    git remote add origin $LIBUSB_REPO
+    git fetch --depth 1 origin $LIBUSB_COMMIT
+    git checkout -b pinned FETCH_HEAD
+    echo "libusb_1_0_la_LDFLAGS += -Wc,-static" >> libusb/Makefile.am
+    ./bootstrap.sh || fail "Could not bootstrap libusb"
+    host="i686-w64-mingw32"
+    LDFLAGS="-Wl,--no-insert-timestamp" ./configure \
+        --host=$host \
+        --build=x86_64-pc-linux-gnu || fail "Could not run ./configure for libusb"
+    make -j4 || fail "Could not build libusb"
+    ${host}-strip libusb/.libs/libusb-1.0.dll
+) || fail "libusb build failed"
+cp "$CACHEDIR/libusb/libusb/.libs/libusb-1.0.dll" $WINEPREFIX/drive_c/tmp/  || fail "Could not copy libusb to its destination"
 
-# Upgrade setuptools (so Electrum can be installed later)
-$PYTHON -m pip install setuptools --upgrade
 
-# Install NSIS installer
-download_if_not_exist $NSIS_FILENAME "$NSIS_URL"
-verify_hash $NSIS_FILENAME "$NSIS_SHA256"
-wine "$PWD/$NSIS_FILENAME" /S
+# copy libsecp dll (already built)
+cp "$PROJECT_ROOT/electrum/libsecp256k1-0.dll" $WINEPREFIX/drive_c/tmp/ || fail "Could not copy libsecp to its destination"
 
-download_if_not_exist $LIBUSB_FILENAME "$LIBUSB_URL"
-verify_hash $LIBUSB_FILENAME "$LIBUSB_SHA256"
-7z x -olibusb $LIBUSB_FILENAME -aoa
 
-cp libusb/MS32/dll/libusb-1.0.dll $WINEPREFIX/drive_c/python$PYTHON_VERSION/
+info "Building PyInstaller."
+# we build our own PyInstaller boot loader as the default one has high
+# anti-virus false positives
+(
+    cd "$WINEPREFIX/drive_c/electrum"
+    ELECTRUM_COMMIT_HASH=$(git rev-parse HEAD)
+    cd "$CACHEDIR"
+    rm -rf pyinstaller
+    mkdir pyinstaller
+    cd pyinstaller
+    # Shallow clone
+    git init
+    git remote add origin $PYINSTALLER_REPO
+    git fetch --depth 1 origin $PYINSTALLER_COMMIT
+    git checkout -b pinned FETCH_HEAD
+    rm -fv PyInstaller/bootloader/Windows-*/run*.exe || true
+    # add reproducible randomness. this ensures we build a different bootloader for each commit.
+    # if we built the same one for all releases, that might also get anti-virus false positives
+    echo "const char *electrum_tag = \"tagged by Electrum@$ELECTRUM_COMMIT_HASH\";" >> ./bootloader/src/pyi_main.c
+    pushd bootloader
+    # cross-compile to Windows using host python
+    python3 ./waf all CC=i686-w64-mingw32-gcc CFLAGS="-static -Wno-dangling-else -Wno-error=unused-value"
+    popd
+    # sanity check bootloader is there:
+    [[ -e PyInstaller/bootloader/Windows-32bit/runw.exe ]] || fail "Could not find runw.exe in target dir!"
+) || fail "PyInstaller build failed"
+info "Installing PyInstaller."
+$PYTHON -m pip install --no-dependencies --no-warn-script-location ./pyinstaller
 
-# add dlls needed for pyinstaller:
-cp $WINEPREFIX/drive_c/python$PYTHON_VERSION/Lib/site-packages/PyQt5/Qt/bin/* $WINEPREFIX/drive_c/python$PYTHON_VERSION/
-
-mkdir -p $WINEPREFIX/drive_c/tmp
-cp secp256k1/libsecp256k1.dll $WINEPREFIX/drive_c/tmp/
-
-echo "Wine is configured."
+info "Wine is configured."
