@@ -292,9 +292,11 @@ class SimpleConfig(PrintError):
 
     def update_contract_from_data(self):
         data = pkgutil.get_data('electrum', 'contract/contract')
-        self.contract_text = data.decode("utf-8")
+        data2 = pkgutil.get_data('electrum', 'contract2/contract')
+        self.contract_text = data2.decode("utf-8")
         # Hash contract and store in string format
         self.set_key('contract_hash', bh2u(Hash(data)[::-1]))
+        self.set_key('contract2_hash', bh2u(Hash(data2)[::-1]))
 
     def update_contract_from_file(self, path):
         # Read contract from file and store it's hash in config
