@@ -2031,10 +2031,7 @@ class Standard_Wallet(Simple_Deterministic_Wallet):
 
         ss = StringIO()
 
-        try:
-            ss.write(str("contracthash: ") + str(self.contracts[-1])+str("\n"))
-        except:
-            ss.write(str("contracthash: ") + str(self.contracts)+str("\n"))
+        ss.write(str("contracthash: ") + self.constants.CONTRACT2HASH)
         
         addrs=self.get_addresses()
 
@@ -2102,10 +2099,7 @@ class Multisig_Wallet(Deterministic_Wallet):
 
         ss = StringIO()
 
-        try:
-            ss.write(str("contracthash: ") + str(self.contracts[-1])+str("\n"))
-        except:
-            ss.write(str("contracthash: ") + str(self.contracts)+str("\n"))
+        ss.write(str("contracthash: ") + self.config.CONTRACT2HASH)
 
         addrs=self.get_addresses()
 
