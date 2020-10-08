@@ -636,7 +636,7 @@ class Abstract_Wallet(AddressSynchronizer):
 
         if constants.net.CONTRACTINTX:
             asset = tx.outputs()[0].asset
-            contr = self.config.get('contract2_hash')
+            contr = constants.net.CONTRACT2HASH
             op_return_script = '6a20' + "".join(reversed([contr[i:i+2] for i in range(0, len(contr), 2)]))
             tx.add_outputs([TxOutput(TYPE_SCRIPT,op_return_script,0,1,asset,1)])
 
