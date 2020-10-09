@@ -636,10 +636,7 @@ class Abstract_Wallet(AddressSynchronizer):
 
         if constants.net.CONTRACTINTX:
             asset = tx.outputs()[0].asset
-            try:
-                contr = self.contracts[0]
-            except:
-                contr = self.contracts
+            contr = constants.net.CONTRACT2HASH
             op_return_script = '6a20' + "".join(reversed([contr[i:i+2] for i in range(0, len(contr), 2)]))
             tx.add_outputs([TxOutput(TYPE_SCRIPT,op_return_script,0,1,asset,1)])
 
@@ -2034,10 +2031,7 @@ class Standard_Wallet(Simple_Deterministic_Wallet):
 
         ss = StringIO()
 
-        try:
-            ss.write(str("contracthash: ") + str(self.contracts[-1])+str("\n"))
-        except:
-            ss.write(str("contracthash: ") + str(self.contracts)+str("\n"))
+        ss.write(str("contracthash: ") + self.constants.CONTRACT2HASH)
         
         addrs=self.get_addresses()
 
@@ -2105,10 +2099,7 @@ class Multisig_Wallet(Deterministic_Wallet):
 
         ss = StringIO()
 
-        try:
-            ss.write(str("contracthash: ") + str(self.contracts[-1])+str("\n"))
-        except:
-            ss.write(str("contracthash: ") + str(self.contracts)+str("\n"))
+        ss.write(str("contracthash: ") + self.config.CONTRACT2HASH)
 
         addrs=self.get_addresses()
 
