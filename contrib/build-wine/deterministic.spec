@@ -40,7 +40,7 @@ datas = [
     (home+'electrum/plugins', 'electrum/plugins'),
     ('C:\\Program Files (x86)\\ZBar\\bin\\', '.'),    
     (home+'electrum/contract/contract', 'electrum/contract'),
-    (home+'electrum/contract/contract2', 'electrum/contract2')
+    (home+'electrum/contract2/contract', 'electrum/contract2')
 ]
 datas += collect_data_files('trezorlib')
 datas += collect_data_files('safetlib')
