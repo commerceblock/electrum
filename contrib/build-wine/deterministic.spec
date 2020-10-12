@@ -1,5 +1,5 @@
 # -*- mode: python -*-
-1;95;0c
+
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules, collect_dynamic_libs
 
 import sys
