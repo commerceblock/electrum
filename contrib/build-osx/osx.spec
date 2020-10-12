@@ -35,8 +35,8 @@ datas = [
     (electrum+'electrum/wordlist/english.txt', PYPKG + '/wordlist'),
     (electrum+'electrum/locale', PYPKG + '/locale'),
     (electrum+'electrum/plugins', PYPKG + '/plugins'),
-    (electrum+'electrum/contract/contract', PYPKG + '/contract'),
-    (electrum+'electrum/contract2/contract', PYPKG + '/contract2')
+    (electrum+'electrum/contract', PYPKG + '/contract'),
+    (electrum+'electrum/contract2', PYPKG + '/contract2')
 ]
 datas += collect_data_files('trezorlib')
 datas += collect_data_files('safetlib')
