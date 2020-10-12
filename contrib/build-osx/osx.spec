@@ -23,6 +23,7 @@ block_cipher = None
 # see https://github.com/pyinstaller/pyinstaller/issues/2005
 hiddenimports = []
 hiddenimports += collect_submodules('pkg_resources')  # workaround for https://github.com/pypa/setuptools/issues/1963
+hiddenimports += collect_submodules('trezorlib')
 hiddenimports += collect_submodules('safetlib')
 hiddenimports += collect_submodules('btchip')
 hiddenimports += collect_submodules('bitcoin')
@@ -37,6 +38,7 @@ datas = [
     (electrum+'electrum/contract/contract', PYPKG + '/contract'),
     (electrum+'electrum/contract2/contract', PYPKG + '/contract2')
 ]
+datas += collect_data_files('trezorlib')
 datas += collect_data_files('safetlib')
 datas += collect_data_files('btchip')
 datas += collect_data_files('bitcoin')
@@ -61,6 +63,8 @@ a = Analysis([electrum+ MAIN_SCRIPT,
               electrum+'electrum/commands.py',
               electrum+'electrum/plugins/cosigner_pool/qt.py',
               electrum+'electrum/plugins/email_requests/qt.py',
+              electrum+'electrum/plugins/trezor/client.py',
+              electrum+'electrum/plugins/trezor/qt.py',
               electrum+'electrum/plugins/safe_t/client.py',
               electrum+'electrum/plugins/safe_t/qt.py',
               electrum+'electrum/plugins/keepkey/qt.py',
