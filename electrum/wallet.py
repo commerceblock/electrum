@@ -2031,7 +2031,7 @@ class Standard_Wallet(Simple_Deterministic_Wallet):
 
         ss = StringIO()
 
-        ss.write(str("contracthash: ") + self.constants.CONTRACT2HASH)
+        ss.write(str("contracthash: ") + constants.net.CONTRACT2HASH)
         
         addrs=self.get_addresses()
 
@@ -2099,7 +2099,7 @@ class Multisig_Wallet(Deterministic_Wallet):
 
         ss = StringIO()
 
-        ss.write(str("contracthash: ") + self.config.CONTRACT2HASH)
+        ss.write(str("contracthash: ") + constants.net.CONTRACT2HASH)
 
         addrs=self.get_addresses()
 
