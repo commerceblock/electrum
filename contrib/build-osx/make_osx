@@ -33,7 +33,8 @@ info "Using these versions for building Electrum:"
 sw_vers
 python3 --version
 echo -n "Pyinstaller "
-pyinstaller --version
+alias pinst="~/Library/Python/3.6/bin/pyinstaller"
+pinst --version
 
 rm -rf ./dist
 
@@ -69,7 +70,7 @@ python3 -m pip install pyqt5 --user || \
 fail "Could not install requirements"
 
 info "Compile images..."
-pyrcc5 icons.qrc -o electrum/gui/qt/icons_rc.py || fail "pyrcc5 not found"
+~/Library/Python/3.6/bin/pyrcc5 icons.qrc -o electrum/gui/qt/icons_rc.py || fail "pyrcc5 not found"
 
 info "Installing hardware wallet requirements..."
 python3 -m pip install -Ir ./contrib/deterministic-build/requirements-hw.txt --user || \
@@ -79,7 +80,7 @@ info "Building Electrum..."
 python3 setup.py install --user > /dev/null || fail "Could not build Electrum"
 
 info "Building binary"
-pyinstaller --noconfirm --ascii --name $VERSION contrib/build-osx/osx.spec || fail "Could not build binary"
+pinst --noconfirm --ascii --name $VERSION contrib/build-osx/osx.spec || fail "Could not build binary"
 
 info "Creating .DMG"
 hdiutil create -fs HFS+ -volname "Ocean Wallet" -srcfolder dist/Ocean\ Wallet.app dist/electrum-$VERSION.dmg || fail "Could not create .DMG"
