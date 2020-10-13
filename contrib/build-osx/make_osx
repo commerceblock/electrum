@@ -26,7 +26,7 @@ fail "Unable to use Python $PYTHON_VERSION"
 
 if ! which pyinstaller > /dev/null; then
   info "Installing pyinstaller"
-  python3 -m pip install pyinstaller -I --user || fail "Could not install pyinstaller"
+  python3 -m pip install pyinstaller==3.6 -I --user || fail "Could not install pyinstaller"
 fi
 
 info "Using these versions for building Electrum:"
