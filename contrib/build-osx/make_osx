@@ -69,14 +69,14 @@ python3 -m pip install pyqt5 --user || \
 fail "Could not install requirements"
 
 info "Compile images..."
-pyrcc5 icons.qrc -o electrum/gui/qt/icons_rc.py || fail "pyrcc5 not found"
+pyrcc5 -no-compress icons.qrc -o electrum/gui/qt/icons_rc.py || fail "pyrcc5 not found"
 
 info "Installing hardware wallet requirements..."
 python3 -m pip install -Ir ./contrib/deterministic-build/requirements-hw.txt --user || \
 fail "Could not install hardware wallet requirements"
 
 info "Building Electrum..."
-python3 setup.py install --user > /dev/null || fail "Could not build Electrum"
+python3 setup.py install > /dev/null || fail "Could not build Electrum"
 
 info "Building binary"
 pyinstaller --noconfirm --ascii --name $VERSION contrib/build-osx/osx.spec || fail "Could not build binary"
