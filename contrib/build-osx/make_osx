@@ -33,8 +33,7 @@ info "Using these versions for building Electrum:"
 sw_vers
 python3 --version
 echo -n "Pyinstaller "
-alias pinst="~/Library/Python/3.6/bin/pyinstaller"
-pinst --version
+pyinstaller --version
 
 rm -rf ./dist
 
@@ -80,7 +79,7 @@ info "Building Electrum..."
 python3 setup.py install --user > /dev/null || fail "Could not build Electrum"
 
 info "Building binary"
-pinst --noconfirm --ascii --name $VERSION contrib/build-osx/osx.spec || fail "Could not build binary"
+pyinstaller --noconfirm --ascii --name $VERSION contrib/build-osx/osx.spec || fail "Could not build binary"
 
 info "Creating .DMG"
 hdiutil create -fs HFS+ -volname "Ocean Wallet" -srcfolder dist/Ocean\ Wallet.app dist/electrum-$VERSION.dmg || fail "Could not create .DMG"
