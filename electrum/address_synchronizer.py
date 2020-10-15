@@ -178,16 +178,16 @@ class AddressSynchronizer(PrintError):
     def start_threads(self, network):
         self.network = network
         if self.network is not None:
-            self.verifier = SPV(self.network, self)
+            self.verifier = None
             self.synchronizer = Synchronizer(self, network)
-            network.add_jobs([self.verifier, self.synchronizer])
+            network.add_jobs([self.synchronizer])
         else:
             self.verifier = None
             self.synchronizer = None
 
     def stop_threads(self):
         if self.network:
-            self.network.remove_jobs([self.synchronizer, self.verifier])
+            self.network.remove_jobs([self.synchronizer])
             self.synchronizer.release()
             self.synchronizer = None
             self.verifier = None
