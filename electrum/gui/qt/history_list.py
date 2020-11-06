@@ -398,7 +398,7 @@ class HistoryList(MyTreeWidget, AcceptFileDragDrop):
         vbox = QVBoxLayout(d)
         defaultname = os.path.expanduser('~/electrum-history.csv')
         select_msg = _('Select file to export your wallet transactions to')
-        hbox, filename_e, csv_button = filename_field(self, self.config, defaultname, select_msg)
+        hbox, filename_e, csv_button, button2 = filename_field(self, self.config, defaultname, select_msg)
         vbox.addLayout(hbox)
         vbox.addStretch(1)
         hbox = Buttons(CancelButton(d), OkButton(d, _('Export')))
