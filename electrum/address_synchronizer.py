@@ -111,7 +111,7 @@ class AddressSynchronizer(PrintError):
     def load_and_cleanup(self):
         self.load_transactions()
         self.load_local_history()
-        self.check_history()
+#        self.check_history()
         self.load_unverified_transactions()
         self.remove_local_transactions_we_dont_have()
 
@@ -695,9 +695,9 @@ class AddressSynchronizer(PrintError):
             self.save_transactions(write=True)
             # if the verifier is also up to date, persist that too;
             # otherwise it will persist its results when it finishes
-            if self.verifier and self.verifier.is_up_to_date():
-                self.save_verified_tx(write=True)
-                self.save_unassigned_kyc_pubkeys(write=True)
+#            if self.verifier and self.verifier.is_up_to_date():
+            self.save_verified_tx(write=True)
+            self.save_unassigned_kyc_pubkeys(write=True)
 
     def is_up_to_date(self):
         with self.lock: return self.up_to_date

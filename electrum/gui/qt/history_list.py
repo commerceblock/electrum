@@ -213,6 +213,9 @@ class HistoryList(MyTreeWidget, AcceptFileDragDrop):
 
     @profiler
     def on_update(self):
+        pass
+
+    def on_update_history(self):
         self.wallet = self.parent.wallet
         fx = self.parent.fx
         r = self.wallet.get_full_history(domain=self.get_domain(), from_timestamp=self.start_timestamp, to_timestamp=self.end_timestamp, fx=fx)

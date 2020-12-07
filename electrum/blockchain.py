@@ -494,17 +494,17 @@ class Blockchain(util.PrintError):
         except Exception as e:
             self.print_error("get_hash:", str(e))
             return False
-        if prev_hash != header.get('prev_block_hash'):
-            self.print_error(prev_hash, "!=", header.get('prev_block_hash'))
-            return False
-        try:
-            self.verify_header(header, prev_hash)
-        except BaseException as e:
-            self.print_error("verify_header:", str(e))
-            return False
-        if not verify_header_proof(header):
-            self.print_error("invalid block proof at height ", height)
-            return False
+#        if prev_hash != header.get('prev_block_hash'):
+#            self.print_error(prev_hash, "!=", header.get('prev_block_hash'))
+#            return False
+#        try:
+#            self.verify_header(header, prev_hash)
+#        except BaseException as e:
+#            self.print_error("verify_header:", str(e))
+#            return False
+#        if not verify_header_proof(header):
+#            self.print_error("invalid block proof at height ", height)
+#            return False
         return True
 
     def connect_chunk(self, idx, hexdata):

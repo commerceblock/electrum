@@ -524,6 +524,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         history_menu.addAction(_("&Summary"), self.history_list.show_summary)
         history_menu.addAction(_("&Plot"), self.history_list.plot_history_dialog)
         history_menu.addAction(_("&Export"), self.history_list.export_history_dialog)
+        history_menu.addAction(_("&Update"), self.history_list.on_update_history)        
         contacts_menu = wallet_menu.addMenu(_("Contacts"))
         contacts_menu.addAction(_("&New"), self.new_contact_dialog)
         contacts_menu.addAction(_("Import"), lambda: self.contact_list.import_contacts())

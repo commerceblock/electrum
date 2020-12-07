@@ -211,8 +211,8 @@ class Synchronizer(ThreadJob):
             self.print_error("missing tx", self.requested_tx)
         addrset=set(self.wallet.get_addresses())    
         self.subscribe_to_addresses(addrset)
-        self.add_whitelist(constants.net.WHITELISTCOINSADDRESS)
-        self.add(constants.net.WHITELISTCOINSADDRESS)
+#        self.add_whitelist(constants.net.WHITELISTCOINSADDRESS)
+#        self.add(constants.net.WHITELISTCOINSADDRESS)
         self.initialized = True
 
     def run(self):
@@ -224,7 +224,7 @@ class Synchronizer(ThreadJob):
         with self.lock:
             addresses = self.new_addresses
             self.new_addresses = set()
-        self.subscribe_to_addresses(addresses)
+#        self.subscribe_to_addresses(addresses)
 
         # 3. Detect if situation has changed
         up_to_date = self.is_up_to_date()
