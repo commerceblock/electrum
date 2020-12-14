@@ -35,7 +35,7 @@ from .qrtextedit import ShowQRTextEdit
 import operator
 import json
 
-MAX_INPUTS = 20
+MAX_INPUTS = 120
 
 class ConsolidateDialog(WindowModalDialog):
 
