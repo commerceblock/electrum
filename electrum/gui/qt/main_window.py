@@ -62,6 +62,7 @@ from .amountedit import AmountEdit, BTCAmountEdit, MyLineEdit, FeerateEdit
 from .qrcodewidget import QRCodeWidget, QRDialog
 from .qrtextedit import ShowQRTextEdit, ScanQRTextEdit
 from .transaction_dialog import show_transaction
+from .multi_sign import show_tx_list
 from .util import *
 from .installwizard import WIF_HELP_TEXT
 from electrum.transaction import Transaction, TxOutput, TYPE_SCRIPT
@@ -524,7 +525,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         history_menu.addAction(_("&Summary"), self.history_list.show_summary)
         history_menu.addAction(_("&Plot"), self.history_list.plot_history_dialog)
         history_menu.addAction(_("&Export"), self.history_list.export_history_dialog)
-        history_menu.addAction(_("&Update"), self.history_list.on_update_history)        
+        history_menu.addAction(_("&Update"), self.history_list.on_update_history)
         contacts_menu = wallet_menu.addMenu(_("Contacts"))
         contacts_menu.addAction(_("&New"), self.new_contact_dialog)
         contacts_menu.addAction(_("Import"), lambda: self.contact_list.import_contacts())
@@ -566,6 +567,7 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         raw_transaction_menu.addAction(_("&From the blockchain"), self.do_process_from_txid)
         raw_transaction_menu.addAction(_("&From QR code"), self.read_tx_from_qrcode)
         self.raw_transaction_menu = raw_transaction_menu
+        tools_menu.addAction(_("&Load Tx list"), self.do_process_list)
         run_hook('init_menubar_tools', self, tools_menu)
 
         help_menu = menubar.addMenu(_("&Help"))
@@ -815,9 +817,17 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         d = address_dialog.AddressDialog(self, addr)
         d.exec_()
 
+    def consolidate_coins(self, coins, addr):
+        from . import consolidate_dialog
+        d = consolidate_dialog.ConsolidateDialog(self, coins, addr)
+        d.exec_()
+
     def show_transaction(self, tx, tx_desc = None):
         '''tx_desc is set only for txs created in the Send tab'''
         show_transaction(tx, self, tx_desc)
+
+    def show_tx_list(self, tx_list):
+        show_tx_list(tx_list, self)
 
     def create_receive_tab(self):
         # A 4-column grid layout.  All the stretch is in the last column.
@@ -1692,6 +1702,10 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
     def sign_tx(self, tx, callback, password):
         self.sign_tx_with_password(tx, callback, password)
 
+    @protected
+    def sign_tx_list(self, tx_list, callback, password):
+        self.sign_tx_list_with_password(tx_list, callback, password)
+
     def sign_tx_with_password(self, tx, callback, password):
         '''Sign the transaction in a separate thread.  When done, calls
         the callback with a success code of True or False.
@@ -1708,6 +1722,21 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         else:
             task = partial(self.wallet.sign_transaction, tx, password)
         msg = _('Signing transaction...')
+        WaitingDialog(self, msg, task, on_success, on_failure)
+
+    def sign_tx_list_with_password(self, tx_list, callback, password):
+        '''Sign the transaction in a separate thread.  When done, calls
+        the callback with a success code of True or False.
+        '''
+        def on_success(result):
+            callback(True)
+        def on_failure(exc_info):
+            self.on_error(exc_info)
+            callback(False)
+        on_success = run_hook('tc_sign_wrapper', self.wallet, tx_list, on_success, on_failure) or on_success
+
+        task = partial(self.wallet.sign_transaction_list, tx_list, password)
+        msg = _('Signing transactions...')
         WaitingDialog(self, msg, task, on_success, on_failure)
 
     def broadcast_transaction(self, tx, tx_desc):
@@ -1746,6 +1775,29 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
                     parent.show_error(msg)
 
         WaitingDialog(self, _('Broadcasting transaction...'),
+                      broadcast_thread, broadcast_done, self.on_error)
+
+    def broadcast_transaction_list(self, tx_list):
+
+        def broadcast_thread():
+            for tx in tx_list:
+                status, msg = self.network.broadcast_transaction(tx)
+            return status, msg
+
+        # Capture current TL window; override might be removed on return
+        parent = self.top_level_window(lambda win: isinstance(win, MessageBoxMixin))
+
+        def broadcast_done(result):
+            # GUI thread
+            if result:
+                status, msg = result
+                if status:
+                    parent.show_message(_('Transaction list sent.') + '\n' + msg)
+                    self.do_clear()
+                else:
+                    parent.show_error(msg)
+
+        WaitingDialog(self, _('Broadcasting transaction list...'),
                       broadcast_thread, broadcast_done, self.on_error)
 
     def query_choice(self, msg, choices):
@@ -2519,6 +2571,18 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
             self.show_critical(_("Wallet was unable to parse your transaction") + ":\n" + str(e))
             return
 
+    def tx_list_from_text(self, txt):
+        tx_list = []
+        try:
+            tx_dict_list = json.loads(str(txt))
+            for tx_dict in tx_dict_list:
+                tx = tx_dict["hex"]
+                tx_list.append(Transaction(tx))
+            return tx_list
+        except BaseException as e:
+            self.show_critical(_("Wallet was unable to parse your transaction") + ":\n" + str(e))
+            return
+
     def read_tx_from_qrcode(self):
         from electrum import qrscanner
         try:
@@ -2551,9 +2615,21 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
             with open(fileName, "r") as f:
                 file_content = f.read()
         except (ValueError, IOError, os.error) as reason:
-            self.show_critical(_("Electrum was unable to open your transaction file") + "\n" + str(reason), title=_("Unable to read file or no transaction found"))
+            self.show_critical(_("Ocean wallet was unable to open your transaction file") + "\n" + str(reason), title=_("Unable to read file or no transaction found"))
             return
         return self.tx_from_text(file_content)
+
+    def read_tx_list_from_file(self):
+        fileName = self.getOpenFileName(_("Select your transaction list file"), "*.txns")
+        if not fileName:
+            return
+        try:
+            with open(fileName, "r") as f:
+                file_content = f.read()
+        except (ValueError, IOError, os.error) as reason:
+            self.show_critical(_("Ocean wallet was unable to open your transaction list file") + "\n" + str(reason), title=_("Unable to read file or no transaction list found"))
+            return
+        return self.tx_list_from_text(file_content) 
 
     def do_process_from_text(self):
         text = text_dialog(self, _('Input raw transaction'), _("Transaction:"), _("Load transaction"))
@@ -2567,6 +2643,11 @@ class ElectrumWindow(QMainWindow, MessageBoxMixin, PrintError):
         tx = self.read_tx_from_file()
         if tx:
             self.show_transaction(tx)
+
+    def do_process_list(self):
+        tx_list = self.read_tx_list_from_file()
+        if tx_list:
+            self.show_tx_list(tx_list)
 
     def do_process_from_txid(self):
         from electrum import transaction

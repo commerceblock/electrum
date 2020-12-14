@@ -197,6 +197,7 @@ class AddressList(MyTreeWidget):
         coins = self.wallet.get_utxos(addrs)
         if coins:
             menu.addAction(_("Spend from"), lambda: self.parent.spend_coins(coins))
+            menu.addAction(_("Consolidate"), lambda: self.parent.consolidate_coins(coins, addr))
             if not multi_select:
                 if constants.net.ENCRYPTED_WHITELIST:
                     menu.addAction(_("Send registeraddress transaction from"), lambda: self.parent.do_register_addresses(coins, addr))

@@ -554,6 +554,7 @@ class Abstract_Wallet(AddressSynchronizer):
 
     def make_unsigned_transaction(self, inputs, outputs, config, fixed_fee=None,
                                   change_addr=None, is_sweep=False, b_allow_zerospend: bool = False):
+
         # check outputs
         i_max = None
         for i, o in enumerate(outputs):
@@ -883,6 +884,35 @@ class Abstract_Wallet(AddressSynchronizer):
             except UserCancelled:
                 continue
         return tx
+
+    def sign_transaction_list(self, tx_list, password):
+        if self.is_watching_only():
+            return
+#        self.add_input_info_to_all_inputs(tx)
+        # hardware wallets require extra info
+#        if any([(isinstance(k, Hardware_KeyStore) and k.can_sign(tx)) for k in self.get_keystores()]):
+#            self.add_hw_info(tx)
+        # sign. start with ready keystores.
+        signed_list = []
+        for k in sorted(self.get_keystores(), key=lambda ks: ks.ready_to_sign(), reverse=True):
+            try:
+                if k.can_sign(tx_list[0]):
+                    k.check_password(password)
+                    if isinstance(k, Hardware_KeyStore):
+                        for tx in tx_list:
+                            k.sign_transaction(tx, password)
+                            signed_list.append(tx)
+                    else:
+                        # Add private keys
+                        keypairs = k.get_tx_derivations(tx_list[0])
+                        for x_pubkey, (derivation, address) in keypairs.items():
+                            keypairs[x_pubkey] = self.get_tweaked_private_key(address, derivation, password, self.get_txin_type(address))
+                        for tx in tx_list:
+                            k.sign_transaction(tx, keypairs)
+                            signed_list.append(tx)
+            except UserCancelled:
+                continue
+        return signed_list
 
     def get_unused_addresses(self):
         # fixme: use slots from expired requests
